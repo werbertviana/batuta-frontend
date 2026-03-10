@@ -58,13 +58,13 @@ Pré-requisitos:
 * Android Studio ou Xcode.
   
 Instalar dependências
-<img src="https://github.com/werbertviana/Batuta-Integra/blob/main/src/assets/images/BG/BG4.jpg"> </image>
+
 ou
-<img src="https://github.com/werbertviana/Batuta-Integra/blob/main/src/assets/images/BG/BG5.jpg"> </image>
+
 Executar o projeto
-<img src="https://github.com/werbertviana/Batuta-Integra/blob/main/src/assets/images/BG/BG6.jpg"> </image>
+
 ou
-<img src="https://github.com/werbertviana/Batuta-Integra/blob/main/src/assets/images/BG/BG7.jpg"> </image>
+
 
 # 📚 Contexto do projeto
 O Batuta foi desenvolvido como parte de um projeto acadêmico voltado ao ensino musical, com o objetivo de explorar a aplicação de gamificação no aprendizado de teoria musical através de dispositivos móveis.
