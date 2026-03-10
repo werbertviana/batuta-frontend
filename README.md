@@ -13,6 +13,15 @@
 🎥 Vídeo demonstrativo da aplicação:
 https://github.com/user-attachments/assets/ab403670-25ae-4e81-91ce-546ab23c0e85
 
+# ✨ Funcionalidades
+O aplicativo Batuta possui funcionalidades voltadas ao aprendizado musical através de gamificação:
+* Exercícios interativos de teoria musical.
+* Sistema de perguntas em formato de quiz.
+* Feedback imediato de respostas.
+* Interface visual voltada para aprendizado.
+* Experiência gamificada para aumentar engajamento.
+* Navegação entre telas de atividades musicais.
+
 # Batuta - Frontend
 * Para a criação do front-end do BATUTA foi utilizado o React-Native, uma biblioteca escrita em JavaScript e criada para construir a interface do usuário em aplicativos móveis.
   
