@@ -58,9 +58,9 @@ Pré-requisitos:
 * Android Studio ou Xcode.
   
 ### Clonar o repositório
-git clone https://github.com/werbertviana/batuta-integra
+<img src="https://github.com/werbertviana/Batuta-Integra/blob/main/src/assets/images/BG/BG8.jpg"> </image>
 ### Entrar na pasta 
-cd batuta-integra
+<img src="https://github.com/werbertviana/Batuta-Integra/blob/main/src/assets/images/BG/BG9.jpg"> </image>
 ### Instalar dependências
 <img src="https://github.com/werbertviana/Batuta-Integra/blob/main/src/assets/images/BG/BG4.jpg"> </image>
 **ou**
