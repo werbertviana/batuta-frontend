@@ -39,12 +39,12 @@ A prototipagem do aplicativo foi baseada em princípios de gamificação aplicad
  
 # 🛠 Tecnologias utilizadas
 Este projeto utiliza as seguintes tecnologias:
-* React Native.
-* JavaScript.
-* React Navigation.
-* Styled Components.
-* React Native Reanimated.
-* React Native Gesture Handler.
+* **React Native.**
+* **JavaScript.**
+* **React Navigation.**
+* **Styled Components.**
+* **React Native Reanimated.**
+* **React Native Gesture Handler.**
   
 # 📂 Estrutura do projeto
 A aplicação foi organizada de forma modular para facilitar manutenção e escalabilidade.
@@ -57,11 +57,11 @@ Pré-requisitos:
 * React Native CLI ou Expo.
 * Android Studio ou Xcode.
   
-Instalar dependências
+**Instalar dependências:**
 <img src="https://github.com/werbertviana/Batuta-Integra/blob/main/src/assets/images/BG/BG4.jpg"> </image>
 ou
 <img src="https://github.com/werbertviana/Batuta-Integra/blob/main/src/assets/images/BG/BG5.jpg"> </image>
-Executar o projeto
+**Executar o projeto:**
 <img src="https://github.com/werbertviana/Batuta-Integra/blob/main/src/assets/images/BG/BG6.jpg"> </image>
 ou
 <img src="https://github.com/werbertviana/Batuta-Integra/blob/main/src/assets/images/BG/BG7.jpg"> </image>
