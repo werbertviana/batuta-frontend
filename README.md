@@ -57,13 +57,17 @@ Pré-requisitos:
 * React Native CLI ou Expo.
 * Android Studio ou Xcode.
   
-**Instalar dependências:**
+### Clonar o repositório
+git clone https://github.com/werbertviana/batuta-integra
+### Entrar na pasta 
+cd batuta-integra
+### Instalar dependências
 <img src="https://github.com/werbertviana/Batuta-Integra/blob/main/src/assets/images/BG/BG4.jpg"> </image>
-ou
+**ou**
 <img src="https://github.com/werbertviana/Batuta-Integra/blob/main/src/assets/images/BG/BG5.jpg"> </image>
-**Executar o projeto:**
+### Executar o projeto
 <img src="https://github.com/werbertviana/Batuta-Integra/blob/main/src/assets/images/BG/BG6.jpg"> </image>
-ou
+**ou**
 <img src="https://github.com/werbertviana/Batuta-Integra/blob/main/src/assets/images/BG/BG7.jpg"> </image>
 
 # 📚 Contexto do projeto
