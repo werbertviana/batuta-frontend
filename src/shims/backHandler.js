@@ -1,18 +1,11 @@
 import { BackHandler } from "react-native";
 
-// Alguns libs antigas (ex: react-native-modal antigo) chamam:
-// BackHandler.removeEventListener('hardwareBackPress', handler)
-//
-// RN novo não tem removeEventListener.
-// Esse shim cria compatibilidade sem quebrar o comportamento atual.
-
 if (BackHandler && typeof BackHandler.removeEventListener !== "function") {
   const originalAdd = BackHandler.addEventListener?.bind(BackHandler);
 
   BackHandler.addEventListener = (eventName, handler) => {
     const sub = originalAdd ? originalAdd(eventName, handler) : null;
 
-    // guarda a subscription no próprio handler para remover depois
     if (handler && typeof handler === "function") {
       handler.__bhSub = sub;
     }
@@ -27,7 +20,6 @@ if (BackHandler && typeof BackHandler.removeEventListener !== "function") {
         sub.remove();
       }
     } catch (_e) {
-      // silêncio: shim não pode quebrar o app
     }
   };
 }
