@@ -45,8 +45,19 @@ Este projeto utiliza as seguintes tecnologias:
 * Styled Components.
 * React Native Reanimated.
 * React Native Gesture Handler.
+  
+# 📂 Estrutura do projeto
+A aplicação foi organizada de forma modular para facilitar manutenção e escalabilidade.
 
-
-
-
-
+# 🚀 Como executar o projeto
+Pré-requisitos:
+* Node.js.
+* npm ou yarn.
+* React Native CLI ou Expo.
+* Android Studio ou Xcode.
+  
+Instalar dependências
+npm install
+ou
+yarn install
+Executar o projeto
