@@ -9,6 +9,9 @@
  
   <img src="https://github.com/werbertviana/Batuta-Integra/blob/main/src/assets/images/BG/BG1.jpg"> </image>
 
+# 🎮 Demonstração
+🎥 Vídeo demonstrativo da aplicação:
+https://github.com/user-attachments/assets/ab403670-25ae-4e81-91ce-546ab23c0e85
 
 # Batuta - Frontend
 * Para a criação do front-end do BATUTA foi utilizado o React-Native, uma biblioteca escrita em JavaScript e criada para construir a interface do usuário em aplicativos móveis.
