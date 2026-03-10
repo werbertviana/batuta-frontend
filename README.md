@@ -1,11 +1,11 @@
-# Batuta
-> Status: Em desenvolvimento
+# Batuta 🎵
+> Status: Em desenvolvimento 🚧
 
-* Para tornar o ensino de teoria musical mais acessível e envolvente, este projeto visa desenvolver um aplicativo móvel chamado BATUTA, baseado em gamificação. A gamificação envolve a incorporação de elementos de jogos para resolver problemas práticos e engajar o público.
+* Batuta é um aplicativo mobile criado para tornar o aprendizado de teoria musical mais acessível, interativo e motivador, utilizando conceitos de gamificação para engajar estudantes de música.
 
-* Na aplicação BATUTA, os conteúdos são abordados de maneira envolvente e interativa, utilizando o formato lúdico dos jogos "quiz" para testar e consolidar o conhecimento. 
+* A aplicação utiliza exercícios em formato de quiz interativo, incentivando o usuário a aprender conceitos musicais de forma progressiva e divertida, semelhante a plataformas modernas de aprendizado gamificado.
 
-* O diferencial do BATUTA está na abordagem lúdica e inovadora da gamificação, que motiva e estimula o aprendizado, proporcionando uma experiência educacional envolvente.
+* O objetivo do projeto é transformar o estudo da teoria musical — que muitas vezes é visto como algo complexo ou pouco atrativo — em uma experiência dinâmica, visual e estimulante.
  
   <img src="https://github.com/werbertviana/Batuta-Integra/blob/main/src/assets/images/BG/BG1.jpg"> </image>
 
