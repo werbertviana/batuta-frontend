@@ -75,11 +75,11 @@ Pré-requisitos:
   
 ### Clonar o repositório
 ``` 
-git clone https://github.com/werbertviana/batuta-integra
+git clone https://github.com/werbertviana/batuta-frontend
 ```
 ### Entrar na pasta 
 ```
-cd batuta-integra
+cd batuta-frontend
 ```
 ### Instalar dependências
 ```
