@@ -6,6 +6,7 @@ import AtivHeader from '../../../../components/ativHeader/AtivHeader';
 
 import {
   AtivContainer,
+  ContentContainer,
   AlternativasContainer,
   AlternativaContainer2,
   ButtonContainer,
@@ -60,15 +61,9 @@ function AtivPauta() {
   const xpRef = useRef(0);
 
   const teveGameOverRef = useRef(false);
-
-  // ⭐ garante bônus só uma vez por atividade (mesma lógica do Intro)
   const bonusJaConcedidoRef = useRef(false);
 
   const questaoAtual = allAtividades[currentIndex];
-
-  // -----------------------------
-  //   Helpers
-  // -----------------------------
 
   const getImages = (imagem) => {
     switch (imagem) {
@@ -92,17 +87,9 @@ function AtivPauta() {
 
   const tipoQuestao = tipoQuestaoRaw === 'texto' ? 'texto' : 'figura';
 
-  // -----------------------------
-  //   Seleção
-  // -----------------------------
-
   const handleSelectAlternative = (alternativa) => {
     setRespostaSelecionada(alternativa);
   };
-
-  // -----------------------------
-  //   Resumo e Regras
-  // -----------------------------
 
   const calcularResumo = (opts = { concluida: true }) => {
     const totalQuestoes = allAtividades.length;
@@ -121,7 +108,6 @@ function AtivPauta() {
 
     const acertouTudo = acertos === totalQuestoes;
 
-    // ⭐ regra bônus igual ao Intro
     const bonusVida =
       aprovado &&
       acertouTudo &&
@@ -134,15 +120,10 @@ function AtivPauta() {
       erros,
       percentualAcerto,
       aprovado,
-
-      // ✅ chave do FIX: só libera progresso se concluída de verdade
       concluida: opts.concluida === true,
-
       xpGanho,
       vidasRestantes,
       bonusVida,
-
-      // Identidade estável (evita colisão com outras atividades)
       atividade: 'pauta',
       atividadeId: 'L1-PAUTA',
     };
@@ -162,18 +143,11 @@ function AtivPauta() {
   const navegarParaHomeComResultado = () => {
     if (!resumoDados) return;
 
-    // ✅ debug (opcional)
-    // console.log('📦 AtivPauta -> Home:', JSON.stringify(resumoDados, null, 2));
-
     navigation.navigate('Tab', {
       screen: 'Home',
       params: { resultadoAtividade: resumoDados },
     });
   };
-
-  // -----------------------------
-  //   Lógica de Vidas
-  // -----------------------------
 
   const aplicarPerdaDeVida = () => {
     let vidasAntes = 2;
@@ -196,10 +170,6 @@ function AtivPauta() {
 
     return false;
   };
-
-  // -----------------------------
-  //   Botões
-  // -----------------------------
 
   const handleConfirm = () => {
     if (!respostaSelecionada) {
@@ -254,10 +224,6 @@ function AtivPauta() {
     }
   };
 
-  // -----------------------------
-  //   Render Questão
-  // -----------------------------
-
   const renderAlternativaFigura = (alternativa, imagem) => {
     const isSelected = respostaSelecionada === alternativa;
 
@@ -300,7 +266,11 @@ function AtivPauta() {
       <QuestaoText>{questaoAtual.questao}</QuestaoText>
 
       <AlternativasContainer
-        style={tipoQuestao === 'texto' ? { flexDirection: 'column' } : null}
+        style={
+          tipoQuestao === 'texto'
+            ? { flexDirection: 'column', flexWrap: 'nowrap', justifyContent: 'flex-start' }
+            : null
+        }
       >
         {questaoAtual.opcoes.map((item) =>
           tipoQuestao === 'texto'
@@ -311,10 +281,6 @@ function AtivPauta() {
     </View>
   );
 
-  // -----------------------------
-  //   Fechar / Recomeçar
-  // -----------------------------
-
   const handleRecomecar = () => {
     acertosRef.current = 0;
     errosRef.current = 0;
@@ -324,6 +290,10 @@ function AtivPauta() {
     setFeedbackVisible(false);
     setRespostaSelecionada(null);
     setCurrentIndex(0);
+
+    if (headerRef.current?.resetLives) {
+      headerRef.current.resetLives();
+    }
   };
 
   const handleLifeModalConfirm = () => {
@@ -351,7 +321,6 @@ function AtivPauta() {
       params: {
         resultadoAtividade: {
           ...resumoParcial,
-          // saiu no meio: não libera progresso e não ganha xp/bonus
           aprovado: false,
           xpGanho: 0,
           bonusVida: false,
@@ -373,12 +342,15 @@ function AtivPauta() {
 
       <NivelIndicator nivel={questaoAtual?.nivel} />
 
-      <FlatList
-        data={[questaoAtual]}
-        keyExtractor={(data) => data.id}
-        renderItem={renderQuestao}
-        showsVerticalScrollIndicator={false}
-      />
+      <ContentContainer>
+        <FlatList
+          data={[questaoAtual]}
+          keyExtractor={(item) => item.id}
+          renderItem={renderQuestao}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 8 }}
+        />
+      </ContentContainer>
 
       <ButtonContainer>
         <SkipButton onPress={handleSkip} />

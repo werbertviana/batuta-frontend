@@ -1,4 +1,3 @@
-// src/pages/atividades/licao01/clave/AtivClave.js
 import React, { useState, useRef } from 'react';
 import { View, FlatList, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -7,6 +6,7 @@ import AtivHeader from '../../../../components/ativHeader/AtivHeader';
 
 import {
   AtivContainer,
+  ContentContainer,
   AlternativasContainer,
   AlternativaContainer2,
   ButtonContainer,
@@ -58,19 +58,12 @@ function AtivClave() {
 
   const acertosRef = useRef(0);
   const errosRef = useRef(0);
-  const xpRef = useRef(0); // XP acumulado nesta atividade
+  const xpRef = useRef(0);
 
-  // Flag para saber se em ALGUM momento dessa atividade houve game over
   const teveGameOverRef = useRef(false);
-
-  // Flag para saber se o bônus desta atividade já foi concedido
   const bonusJaConcedidoRef = useRef(false);
 
   const questaoAtual = allAtividades[currentIndex];
-
-  // -----------------------------
-  //   Helpers
-  // -----------------------------
 
   const getImages = (imagem) => {
     switch (imagem) {
@@ -94,17 +87,9 @@ function AtivClave() {
 
   const tipoQuestao = tipoQuestaoRaw === 'texto' ? 'texto' : 'figura';
 
-  // -----------------------------
-  //   Seleção de alternativas
-  // -----------------------------
-
   const handleSelectAlternative = (alternativa) => {
     setRespostaSelecionada(alternativa);
   };
-
-  // -----------------------------
-  //   Resumo / Navegação
-  // -----------------------------
 
   const calcularResumo = () => {
     const totalQuestoes = allAtividades.length;
@@ -114,7 +99,6 @@ function AtivClave() {
     const aprovado = percentualAcerto >= 50;
     const xpGanho = xpRef.current;
 
-    // vidas que sobraram no header da atividade
     let vidasRestantes = 2;
     if (headerRef.current?.getLives) {
       const v = headerRef.current.getLives();
@@ -123,11 +107,6 @@ function AtivClave() {
       }
     }
 
-    // Regra de bônus:
-    // - acertou TODAS as questões
-    // - foi aprovado
-    // - NUNCA teve game over nessa atividade
-    // - e ainda NÃO recebeu o bônus desta atividade antes
     const acertouTudo = acertos === totalQuestoes;
     const podeGanharBonus =
       aprovado &&
@@ -151,7 +130,6 @@ function AtivClave() {
   const mostrarResumoFinal = () => {
     const resultado = calcularResumo();
 
-    // se esse resumo deu direito a bônus, marca que essa atividade já concedeu bônus
     if (resultado.bonusVida) {
       bonusJaConcedidoRef.current = true;
     }
@@ -171,12 +149,7 @@ function AtivClave() {
     });
   };
 
-  // -----------------------------
-  //   Lógica de vidas
-  // -----------------------------
-
   const aplicarPerdaDeVida = () => {
-    // lê vidas ANTES de perder
     let vidasAntes = 2;
     if (headerRef.current?.getLives) {
       const v = headerRef.current.getLives();
@@ -189,12 +162,7 @@ function AtivClave() {
       headerRef.current.loseLife();
     }
 
-    // começa com 2
-    // 1º erro: 2 -> 1
-    // 2º erro: 1 -> 0
-    // 3º erro: 0 -> 0 (game over)
     if (vidasAntes === 0) {
-      // já estava em 0 e errou de novo → game over
       teveGameOverRef.current = true;
       setFeedbackVisible(false);
       setLifeModalVisible(true);
@@ -203,10 +171,6 @@ function AtivClave() {
 
     return false;
   };
-
-  // -----------------------------
-  //   Botões
-  // -----------------------------
 
   const handleConfirm = () => {
     if (!respostaSelecionada) {
@@ -218,16 +182,13 @@ function AtivClave() {
     const isCorrect = respostaSelecionada === alternativaCorreta;
 
     if (isCorrect) {
-      // acerto → +xp, não perde vida
       acertosRef.current += 1;
-      xpRef.current += 2; // +2 XP por acerto
+      xpRef.current += 2;
     } else {
-      // erro → conta erro e pode perder vida
       errosRef.current += 1;
 
       const gameOver = aplicarPerdaDeVida();
       if (gameOver) {
-        // se acabou as vidas, não mostra feedback nem vai pro resumo
         return;
       }
     }
@@ -255,7 +216,6 @@ function AtivClave() {
   };
 
   const handleSkip = () => {
-    // pular também conta como erro
     errosRef.current += 1;
 
     const gameOver = aplicarPerdaDeVida();
@@ -273,10 +233,6 @@ function AtivClave() {
       mostrarResumoFinal();
     }
   };
-
-  // -----------------------------
-  //   Render de alternativas
-  // -----------------------------
 
   const renderAlternativaFigura = (alternativa, imagem) => {
     const isSelected = respostaSelecionada === alternativa;
@@ -320,7 +276,11 @@ function AtivClave() {
       <QuestaoText>{questaoAtual.questao}</QuestaoText>
 
       <AlternativasContainer
-        style={tipoQuestao === 'texto' ? { flexDirection: 'column' } : null}
+        style={
+          tipoQuestao === 'texto'
+            ? { flexDirection: 'column', flexWrap: 'nowrap', justifyContent: 'flex-start' }
+            : null
+        }
       >
         {questaoAtual.opcoes.map((item) =>
           tipoQuestao === 'texto'
@@ -331,13 +291,7 @@ function AtivClave() {
     </View>
   );
 
-  // -----------------------------
-  //   Recomeçar / Sair
-  // -----------------------------
-
   const handleRecomecar = () => {
-    // Recomeçar pelo RESUMO:
-    // → zera pontuação da atividade, mas NÃO devolve vidas
     acertosRef.current = 0;
     errosRef.current = 0;
     xpRef.current = 0;
@@ -346,10 +300,6 @@ function AtivClave() {
     setFeedbackVisible(false);
     setRespostaSelecionada(null);
     setCurrentIndex(0);
-    // NÃO chama resetLives aqui: vida perdida continua perdida
-    // e não zera o teveGameOverRef nem bonusJaConcedidoRef:
-    // se já teve game over ou já ganhou bônus antes,
-    // isso continua valendo para esta atividade.
   };
 
   const handleFecharResumo = () => {
@@ -358,8 +308,6 @@ function AtivClave() {
   };
 
   const handleLifeModalConfirm = () => {
-    // Recomeçar POR TER PERDIDO TODAS AS VIDAS:
-    // → aqui SIM devolve as 2 vidas
     setLifeModalVisible(false);
 
     acertosRef.current = 0;
@@ -374,19 +322,16 @@ function AtivClave() {
     if (headerRef.current?.resetLives) {
       headerRef.current.resetLives();
     }
-    // teveGameOverRef permanece true → não ganha bônus nesta atividade
-    // bonusJaConcedidoRef também permanece como estava.
   };
 
-  // fechar atividade pelo X, levando as vidas atuais para a Home
   const handleCloseActivity = () => {
     const resumoParcial = calcularResumo();
 
     const resultado = {
       ...resumoParcial,
-      aprovado: false, // saindo no X não conta como aprovado
-      xpGanho: 0, // não salva XP parcial
-      bonusVida: false, // nunca dá bônus saindo pelo X
+      aprovado: false,
+      xpGanho: 0,
+      bonusVida: false,
     };
 
     navigation.navigate('Tab', {
@@ -397,12 +342,7 @@ function AtivClave() {
     });
   };
 
-  // progresso da barra
   const progress = (currentIndex + 1) / allAtividades.length;
-
-  // -----------------------------
-  //   JSX
-  // -----------------------------
 
   return (
     <AtivContainer>
@@ -414,12 +354,15 @@ function AtivClave() {
 
       <NivelIndicator nivel={questaoAtual?.nivel} />
 
-      <FlatList
-        data={[questaoAtual]}
-        keyExtractor={(data) => data.id}
-        renderItem={renderQuestao}
-        showsVerticalScrollIndicator={false}
-      />
+      <ContentContainer>
+        <FlatList
+          data={[questaoAtual]}
+          keyExtractor={(item) => item.id}
+          renderItem={renderQuestao}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 8 }}
+        />
+      </ContentContainer>
 
       <ButtonContainer>
         <SkipButton onPress={handleSkip} />

@@ -1,74 +1,82 @@
 import styled from 'styled-components/native';
 import FastImage from 'react-native-fast-image';
+import { Dimensions } from 'react-native';
+
+const { width, height } = Dimensions.get('window');
+
+const cardWidth = Math.min(width * 0.55, 160);
+const cardHeight = Math.min(height * 0.27, 230);
 
 export const AtivContainer = styled.SafeAreaView`
-    align-items: center;
-    justify-content: center;
-    background-color: #ffffff;
     flex: 1;
+    background-color: #ffffff;
+    align-items: center;
 `;
 
-export const AlternativasContainer = styled.SafeAreaView`
+export const ContentContainer = styled.View`
+    flex: 1;
+    width: 100%;
+    padding-horizontal: 10px;
+`;
+
+export const AlternativasContainer = styled.View`
+    width: 100%;
+    align-items: center;
     justify-content: center;
-    align-items: center; 
     flex-direction: row;
     flex-wrap: wrap;
-    margin-top: 15px;
+    margin-top: 8px;
 `;
 
 export const AlternativaContainer = styled.TouchableOpacity`
     align-items: center;
-    width: 160px;
-    height: 250px;
+    width: ${cardWidth}px;
+    height: ${cardHeight}px;
     border-radius: 12px;
     border-color: #D2D3D5;
     background-color: #FFFFFF;
     border-width: 4px;
-    margin: 15px;
+    margin: 6px;
 `;
 
 export const AlternativaContainer2 = styled.TouchableOpacity`
     justify-content: center;
     align-items: center;
-    width: 350px;
-    height: 100px;
+    width: ${Math.min(width * 0.86, 350)}px;
+    min-height: ${Math.min(Math.max(height * 0.11, 105), 110)}px;
     border-radius: 12px;
     border-color: #D2D3D5;
     background-color: #FFFFFF;
     border-width: 4px;
-    margin: 10px;   
+    margin-vertical: 6px;
+    padding-vertical: 10px;
+    padding-horizontal: 18px;
+    position: relative;
 `;
 
-/**
- * Círculo usado nas questões com FIGURA (fica “grudado” no topo à esquerda)
- */
 export const CircleContainer = styled.SafeAreaView`
     align-self: flex-start;
     align-items: center;
     position: absolute;
     justify-content: center;
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
     border-radius: 100px;
     border-color: #D2D3D5;
     background-color: #FFFFFF;
     border-width: 4px;
-    top: 8px;
-    left: 8px;
+    top: 6px;
+    left: 6px;
     z-index: 2;
 `;
 
-/**
- * Círculo usado nas questões de TEXTO:
- * posição fixa dentro do card, independente do texto.
- */
 export const CircleInline = styled.SafeAreaView`
     position: absolute;
     left: 6px;
     align-items: center;
     justify-content: center;
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
     border-radius: 100px;
     border-color: #D2D3D5;
     background-color: #FFFFFF;
@@ -76,25 +84,27 @@ export const CircleInline = styled.SafeAreaView`
 `;
 
 export const ImageContainer = styled.SafeAreaView`
-    width: 160px;
-    height: 250px;
+    width: 100%;
+    height: 100%;
     align-items: center;
     justify-content: center;
+    padding: 8px;
 `;
 
 export const ButtonContainer = styled.SafeAreaView`
-    justify-content: space-around;
     width: 100%;
-    align-items: center; 
     flex-direction: row;
-    margin-bottom: 20px;
+    justify-content: space-around;
+    align-items: center;
+    padding-horizontal: 12px;
+    padding-bottom: 22px;
 `;
 
 export const SkipView = styled.TouchableOpacity`
     width: 40%;
-    height: 60px;
+    height: 56px;
     justify-content: center;
-    align-items: 'center';
+    align-items: center;
     border-radius: 12px;
     border-color: #D2D3D5;
     background-color: #FFFFFF;
@@ -104,7 +114,7 @@ export const SkipView = styled.TouchableOpacity`
 
 export const NextView = styled.TouchableOpacity`
     width: 40%;
-    height: 60px;
+    height: 56px;
     justify-content: center;
     align-items: center;
     border-radius: 12px;
@@ -116,11 +126,12 @@ export const NextView = styled.TouchableOpacity`
 `;
 
 export const NivelContainer = styled.SafeAreaView`
-    margin-top: 10px;
+    margin-top: 4px;
+    margin-bottom: 2px;
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    height: 50px;
+    min-height: 36px;
 `;
 
 export const DivisorLine = styled.SafeAreaView`
@@ -130,7 +141,7 @@ export const DivisorLine = styled.SafeAreaView`
     border-radius: 5px;
     align-items: center;
     justify-content: center;
-`;  
+`;
 
 export const ImageIcon = styled(FastImage)`
     position: absolute;
@@ -142,37 +153,41 @@ export const Text02 = styled.Text`
     font-family: GothamCondensed-Medium;
     text-align: center;
     color: black;
-    font-size: 25px;   
+    font-size: 21px;
 `;
 
 export const Text01 = styled.Text`
     font-family: GothamCondensed-Medium;
-    text-align: center ;
+    text-align: center;
     color: white;
-    font-size: 25px;
+    font-size: 22px;
 `;
 
 export const QuestaoText = styled.Text`
     font-family: GothamCondensed-Medium;
-    text-align: center ;
+    text-align: center;
     color: black;
-    font-size: 26px;
+    font-size: ${Math.min(width * 0.065, 26)}px;
+    line-height: ${Math.min(width * 0.075, 30)}px;
+    padding-horizontal: 16px;
+    margin-top: 2px;
 `;
 
 export const AlternativaText = styled.Text`
     font-family: GothamCondensed-Medium;
     text-align: center;
     color: black;
-    font-size: 20px;
-    margin-left: 35px;   
+    font-size: 18px;
+    width: 100%;
+    padding-left: 8px;
 `;
 
 export const ImageAlternativa = styled(FastImage)`
-    width: 100px;
-    height: 190px;
+    width: ${Math.min(cardWidth * 0.68, 88)}px;
+    height: ${Math.min(cardHeight * 0.78, 165)}px;
 `;
 
 export const ImageAlternativa2 = styled(FastImage)`
     width: 280px;
-    height: 100px; 
+    height: 100px;
 `;

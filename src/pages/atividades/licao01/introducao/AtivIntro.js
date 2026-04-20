@@ -8,6 +8,7 @@ import AtivHeader from '../../../../components/ativHeader/AtivHeader';
 
 import {
   AtivContainer,
+  ContentContainer,
   AlternativasContainer,
   AlternativaContainer2,
   ButtonContainer,
@@ -62,15 +63,9 @@ function AtivIntro() {
   const xpRef = useRef(0);
 
   const teveGameOverRef = useRef(false);
-
-  // ⭐ NOVO: garante bônus só uma vez por atividade
   const bonusJaConcedidoRef = useRef(false);
 
   const questaoAtual = allAtividades[currentIndex];
-
-  // -----------------------------
-  //   Helpers
-  // -----------------------------
 
   const getImages = (imagem) => {
     switch (imagem) {
@@ -94,17 +89,9 @@ function AtivIntro() {
 
   const tipoQuestao = tipoQuestaoRaw === 'texto' ? 'texto' : 'figura';
 
-  // -----------------------------
-  //   Seleção
-  // -----------------------------
-
   const handleSelectAlternative = (alternativa) => {
     setRespostaSelecionada(alternativa);
   };
-
-  // -----------------------------
-  //   Resumo e Regras
-  // -----------------------------
 
   const calcularResumo = () => {
     const totalQuestoes = allAtividades.length;
@@ -123,7 +110,6 @@ function AtivIntro() {
 
     const acertouTudo = acertos === totalQuestoes;
 
-    // ⭐ REGRA ATUALIZADA (igual as outras atividades)
     const bonusVida =
       aprovado &&
       acertouTudo &&
@@ -146,7 +132,6 @@ function AtivIntro() {
   const mostrarResumoFinal = () => {
     const resultado = calcularResumo();
 
-    // marca que o bônus já foi concedido
     if (resultado.bonusVida) {
       bonusJaConcedidoRef.current = true;
     }
@@ -163,10 +148,6 @@ function AtivIntro() {
       params: { resultadoAtividade: resumoDados },
     });
   };
-
-  // -----------------------------
-  //   Lógica de Vidas
-  // -----------------------------
 
   const aplicarPerdaDeVida = () => {
     let vidasAntes = 2;
@@ -189,10 +170,6 @@ function AtivIntro() {
 
     return false;
   };
-
-  // -----------------------------
-  //   Botões
-  // -----------------------------
 
   const handleConfirm = () => {
     if (!respostaSelecionada) {
@@ -249,10 +226,6 @@ function AtivIntro() {
     }
   };
 
-  // -----------------------------
-  //   Render Questão
-  // -----------------------------
-
   const renderAlternativaFigura = (alternativa, imagem) => {
     const isSelected = respostaSelecionada === alternativa;
 
@@ -295,7 +268,11 @@ function AtivIntro() {
       <QuestaoText>{questaoAtual.questao}</QuestaoText>
 
       <AlternativasContainer
-        style={tipoQuestao === 'texto' ? { flexDirection: 'column' } : null}
+        style={
+          tipoQuestao === 'texto'
+            ? { flexDirection: 'column', flexWrap: 'nowrap', justifyContent: 'flex-start' }
+            : null
+        }
       >
         {questaoAtual.opcoes.map((item) =>
           tipoQuestao === 'texto'
@@ -306,10 +283,6 @@ function AtivIntro() {
     </View>
   );
 
-  // -----------------------------
-  //   Fechar / Recomeçar
-  // -----------------------------
-
   const handleRecomecar = () => {
     acertosRef.current = 0;
     errosRef.current = 0;
@@ -319,6 +292,10 @@ function AtivIntro() {
     setFeedbackVisible(false);
     setRespostaSelecionada(null);
     setCurrentIndex(0);
+
+    if (headerRef.current?.resetLives) {
+      headerRef.current.resetLives();
+    }
   };
 
   const handleLifeModalConfirm = () => {
@@ -336,8 +313,6 @@ function AtivIntro() {
     setResumoVisible(false);
     setFeedbackVisible(false);
     setRespostaSelecionada(null);
-
-    // mantém teveGameOverRef = true → não dá bônus depois
   };
 
   const handleCloseActivity = () => {
@@ -368,12 +343,15 @@ function AtivIntro() {
 
       <NivelIndicator nivel={questaoAtual?.nivel} />
 
-      <FlatList
-        data={[questaoAtual]}
-        keyExtractor={(data) => data.id}
-        renderItem={renderQuestao}
-        showsVerticalScrollIndicator={false}
-      />
+      <ContentContainer>
+        <FlatList
+          data={[questaoAtual]}
+          keyExtractor={(item) => item.id}
+          renderItem={renderQuestao}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 8 }}
+        />
+      </ContentContainer>
 
       <ButtonContainer>
         <SkipButton onPress={handleSkip} />

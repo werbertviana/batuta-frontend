@@ -7,6 +7,7 @@ import AtivHeader from '../../../../components/ativHeader/AtivHeader';
 
 import {
   AtivContainer,
+  ContentContainer,
   AlternativasContainer,
   AlternativaContainer2,
   ButtonContainer,
@@ -63,19 +64,12 @@ function AtivDuracao() {
 
   const acertosRef = useRef(0);
   const errosRef = useRef(0);
-  const xpRef = useRef(0); // XP acumulado nesta atividade
+  const xpRef = useRef(0);
 
-  // Flag para saber se em ALGUM momento dessa atividade houve game over
   const teveGameOverRef = useRef(false);
-
-  // NOVO: garante que o bônus dessa atividade só seja dado uma vez
   const bonusJaConcedidoRef = useRef(false);
 
   const questaoAtual = allAtividades[currentIndex];
-
-  // -----------------------------
-  //   Helpers
-  // -----------------------------
 
   const getImages = (imagem) => {
     switch (imagem) {
@@ -111,10 +105,6 @@ function AtivDuracao() {
     setRespostaSelecionada(alternativa);
   };
 
-  // -----------------------------
-  //   Navegação / Resumo
-  // -----------------------------
-
   const calcularResumo = () => {
     const totalQuestoes = allAtividades.length;
     const acertos = acertosRef.current;
@@ -131,7 +121,6 @@ function AtivDuracao() {
 
     const acertouTudo = acertos === totalQuestoes;
 
-    // mesma regra do AtivClave, incluindo trava de bônus já concedido
     const bonusVida =
       aprovado &&
       acertouTudo &&
@@ -154,7 +143,6 @@ function AtivDuracao() {
   const mostrarResumoFinal = () => {
     const resultado = calcularResumo();
 
-    // se deu direito a bônus, marca que essa atividade já concedeu
     if (resultado.bonusVida) {
       bonusJaConcedidoRef.current = true;
     }
@@ -174,10 +162,6 @@ function AtivDuracao() {
     });
   };
 
-  // -----------------------------
-  //   Lógica de vidas
-  // -----------------------------
-
   const aplicarPerdaDeVida = () => {
     let vidasAntes = 2;
 
@@ -191,7 +175,6 @@ function AtivDuracao() {
     }
 
     if (vidasAntes === 0) {
-      // já estava em 0 e errou de novo → game over
       teveGameOverRef.current = true;
       setFeedbackVisible(false);
       setLifeModalVisible(true);
@@ -200,10 +183,6 @@ function AtivDuracao() {
 
     return false;
   };
-
-  // -----------------------------
-  //   Botões
-  // -----------------------------
 
   const handleConfirm = () => {
     if (!respostaSelecionada) {
@@ -216,7 +195,7 @@ function AtivDuracao() {
 
     if (isCorrect) {
       acertosRef.current += 1;
-      xpRef.current += 2; // +2 XP por acerto
+      xpRef.current += 2;
     } else {
       errosRef.current += 1;
       const gameOver = aplicarPerdaDeVida();
@@ -246,7 +225,6 @@ function AtivDuracao() {
   };
 
   const handleSkip = () => {
-    // pular também conta como erro
     errosRef.current += 1;
 
     const gameOver = aplicarPerdaDeVida();
@@ -262,10 +240,6 @@ function AtivDuracao() {
       mostrarResumoFinal();
     }
   };
-
-  // -----------------------------
-  //   Render de alternativas
-  // -----------------------------
 
   const renderAlternativaFigura = (alternativa, imagem) => {
     const isSelected = respostaSelecionada === alternativa;
@@ -309,7 +283,11 @@ function AtivDuracao() {
       <QuestaoText>{questaoAtual.questao}</QuestaoText>
 
       <AlternativasContainer
-        style={tipoQuestao === 'texto' ? { flexDirection: 'column' } : null}
+        style={
+          tipoQuestao === 'texto'
+            ? { flexDirection: 'column', flexWrap: 'nowrap', justifyContent: 'flex-start' }
+            : null
+        }
       >
         {questaoAtual.opcoes.map((item) =>
           tipoQuestao === 'texto'
@@ -320,10 +298,6 @@ function AtivDuracao() {
     </QuestaoContainer>
   );
 
-  // -----------------------------
-  //   Recomeçar / Sair / Modais
-  // -----------------------------
-
   const handleRecomecar = () => {
     acertosRef.current = 0;
     errosRef.current = 0;
@@ -333,7 +307,6 @@ function AtivDuracao() {
     setFeedbackVisible(false);
     setRespostaSelecionada(null);
     setCurrentIndex(0);
-    // não devolve vidas aqui (igual AtivClave)
   };
 
   const handleFecharResumo = () => {
@@ -342,7 +315,6 @@ function AtivDuracao() {
   };
 
   const handleLifeModalConfirm = () => {
-    // Game over → recomeça atividade e devolve as 2 vidas
     setLifeModalVisible(false);
 
     acertosRef.current = 0;
@@ -377,12 +349,7 @@ function AtivDuracao() {
     });
   };
 
-  // progresso da barra
   const progress = (currentIndex + 1) / allAtividades.length;
-
-  // -----------------------------
-  //   JSX
-  // -----------------------------
 
   return (
     <AtivContainer>
@@ -394,12 +361,15 @@ function AtivDuracao() {
 
       <NivelIndicator nivel={questaoAtual?.nivel} />
 
-      <FlatList
-        data={[questaoAtual]}
-        keyExtractor={(data) => data.id}
-        renderItem={renderQuestao}
-        showsVerticalScrollIndicator={false}
-      />
+      <ContentContainer>
+        <FlatList
+          data={[questaoAtual]}
+          keyExtractor={(item) => item.id}
+          renderItem={renderQuestao}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 8 }}
+        />
+      </ContentContainer>
 
       <ButtonContainer>
         <SkipButton onPress={handleSkip} />

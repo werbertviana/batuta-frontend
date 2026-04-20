@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FlatList, View, TouchableOpacity } from 'react-native';
+import { FlatList, View, TouchableOpacity, Dimensions } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
@@ -28,18 +28,20 @@ import { getLifeGlobal, setLifeGlobal } from '../../store/lifeStore';
 
 const Bg = require('../../assets/images/home/bg.png');
 
-// 🔹 globais da sessão
+const { width, height } = Dimensions.get('window');
+
+// globais da sessão
 let lastUserId = null;
 let nivelGlobal = null;
 let xpGlobal = 0;
 let batutaGlobal = 0;
 
-// 🔹 controle por sessão
+// controle por sessão
 const atividadesComBonus = new Set();
 const atividadesConcluidas = new Set();
 const licoesComBatuta = new Set();
 
-// 🔹 fallback para garantir unicidade se vier tudo indefinido
+// fallback para garantir unicidade se vier tudo indefinido
 let resultadoSeq = 0;
 
 function getResultadoId(resultado) {
@@ -65,22 +67,17 @@ function Home({ route }) {
   const [lockedLessonVisible, setLockedLessonVisible] = useState(false);
   const [bonusModalVisible, setBonusModalVisible] = useState(false);
 
-  // ✅ estados para UI refletir SEM depender de variáveis globais
   const [nivel, setNivel] = useState(() => (nivelGlobal ?? 1));
   const [life, setLife] = useState(getLifeGlobal());
   const [batutaPoints, setBatutaPoints] = useState(() => batutaGlobal);
-  const [xpPoints, setXpPoints] = useState(() => xpGlobal); // ✅ FIX do Header
+  const [xpPoints, setXpPoints] = useState(() => xpGlobal);
 
-  /**
-   * ✅ Inicializa dados vindos do backend
-   * Só re-inicializa quando TROCAR o usuário
-   */
   useEffect(() => {
     if (!currentUser?.gameStats) return;
 
     const userId = currentUser.id;
-
     const changedUser = lastUserId !== userId;
+
     if (changedUser) {
       lastUserId = userId;
 
@@ -115,7 +112,6 @@ function Home({ route }) {
     }
   }, [currentUser?.id, currentUser?.gameStats]);
 
-  // ----- Lógica de liberação -----
   const lesson1 = staticFeeds.feeds.find((l) => l.lesson === '1');
   const totalItensLicao1 = lesson1?.items?.length || 0;
 
@@ -126,9 +122,17 @@ function Home({ route }) {
   const licao2Concluida = nivel > (totalItensLicao1 + totalItensLicao2);
   const licao2Bloqueada = !licao1Concluida;
 
-  /**
-   * ✅ Processa resultado ao focar no Home, atualiza UI e PERSISTE no backend.
-   */
+  // tamanhos responsivos quando a lição 02 estiver bloqueada
+  const compactLesson1IconWidth = Math.min(width * 0.68, 260);
+  const compactLesson1IconHeight = Math.min(height * 0.12, 110);
+  const compactLesson1BoardHeight = Math.min(height * 0.55, 400);
+
+  const lockedLessonIconWidth = Math.min(width * 0.64, 250);
+  const lockedLessonIconHeight = Math.min(height * 0.1, 95);
+  const lockedCardWidth = Math.min(width * 0.68, 250);
+  const lockedCardHeight = Math.min(height * 0.11, 100);
+  const lockedCardMarginBottom = Math.max(height * 0.025, 18);
+
   useFocusEffect(
     useCallback(() => {
       const resultado = route?.params?.resultadoAtividade;
@@ -138,17 +142,13 @@ function Home({ route }) {
 
       const resultadoId = getResultadoId(resultado);
 
-      // -------------------------
-      // 1) XP
-      // -------------------------
+      // XP
       if (resultado.xpGanho) {
         xpGlobal += resultado.xpGanho;
         setXpPoints(xpGlobal);
       }
 
-      // -------------------------
-      // 2) VIDA
-      // -------------------------
+      // VIDA
       let novaVida = getLifeGlobal();
 
       if (typeof resultado.vidasRestantes === 'number') {
@@ -166,9 +166,7 @@ function Home({ route }) {
       setLifeGlobal(novaVida);
       setLife(novaVida);
 
-      // -------------------------
-      // 3) NÍVEL
-      // -------------------------
+      // NÍVEL
       const deveSubirNivel =
         resultado?.concluida === true || resultado?.aprovado === true;
 
@@ -180,7 +178,6 @@ function Home({ route }) {
 
           nextNivel = (nivelGlobal ?? nivel) + 1;
           nivelGlobal = nextNivel;
-
           setNivel(nextNivel);
 
           console.log('[HOME] nível subiu para:', nextNivel, 'via', resultadoId);
@@ -188,17 +185,9 @@ function Home({ route }) {
           console.log('[HOME] ignorado (já concluída na sessão):', resultadoId);
         }
       } else {
-        console.log(
-          '[HOME] não subiu nível (concluida/aprovado false):',
-          resultadoId
-        );
+        console.log('[HOME] não subiu nível (concluida/aprovado false):', resultadoId);
       }
 
-      // -------------------------
-      // 4) PERSISTE NO BACKEND (PUT /users/:id)
-      // -------------------------
-      // ✅ Atualiza com os valores atuais (UI + globals)
-      // Obs: batutaPoints pode ser atualizado em outro effect quando conclui lição inteira.
       updateGameStats({
         nivel: String(nivelGlobal ?? nextNivel),
         xpPoints: Number(xpGlobal || 0),
@@ -206,15 +195,10 @@ function Home({ route }) {
         batutaPoints: Number(batutaGlobal || 0),
       });
 
-      // limpa param (pra não reaplicar ao voltar de novo)
       navigation.setParams({ resultadoAtividade: undefined });
     }, [route?.params?.resultadoAtividade, navigation, updateGameStats, nivel])
   );
 
-  /**
-   * ✅ +1 Batuta quando concluir a lição inteira (uma vez por lição)
-   * ✅ e persiste também no backend para ficar “condizente”.
-   */
   useEffect(() => {
     let changed = false;
 
@@ -233,7 +217,6 @@ function Home({ route }) {
     }
 
     if (changed) {
-      // persiste batutaPoints no backend
       updateGameStats({
         batutaPoints: Number(batutaGlobal || 0),
       });
@@ -246,7 +229,6 @@ function Home({ route }) {
     return null;
   };
 
-  // ✅ libera item por nível (com limite)
   const isItemActive = (lesson, index) => {
     const lessonNumber = Number(lesson.lesson);
 
@@ -272,7 +254,7 @@ function Home({ route }) {
 
     if (lesson.lesson === '2' && licao2Bloqueada) {
       return (
-        <FeedContainer style={{ alignItems: 'center', marginTop: 10 }}>
+        <FeedContainer style={{ alignItems: 'center', marginTop: 4 }}>
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => setLockedLessonVisible(true)}
@@ -282,16 +264,21 @@ function Home({ route }) {
                 <IconLesson
                   source={Licao02Inactive}
                   resizeMode="contain"
-                  style={{ width: 250, height: 110, marginBottom: 10 }}
+                  style={{
+                    width: lockedLessonIconWidth,
+                    height: lockedLessonIconHeight,
+                    marginBottom: 8,
+                  }}
                 />
               </LessonContainer>
 
               <View
                 style={{
-                  width: 260,
-                  height: 260,
+                  width: lockedCardWidth,
+                  height: lockedCardHeight,
                   backgroundColor: '#fff',
                   borderRadius: 16,
+                  marginBottom: lockedCardMarginBottom,
                 }}
               />
             </View>
@@ -301,12 +288,35 @@ function Home({ route }) {
     }
 
     return (
-      <FeedContainer>
+      <FeedContainer style={licao2Bloqueada ? { marginTop: Math.max(height * 0.02, 20) } : undefined}>
         <LessonContainer>
-          <IconLesson resizeMode="contain" source={getLessonIcon(lesson.lesson)} />
+          <IconLesson
+            resizeMode="contain"
+            source={getLessonIcon(lesson.lesson)}
+            style={
+              licao2Bloqueada && lesson.lesson === '1'
+                ? {
+                    width: compactLesson1IconWidth,
+                    height: compactLesson1IconHeight,
+                    marginBottom: 8,
+                  }
+                : undefined
+            }
+          />
         </LessonContainer>
 
-        <Background resizeMode="contain" source={Bg}>
+        <Background
+          resizeMode="contain"
+          source={Bg}
+          style={
+            licao2Bloqueada && lesson.lesson === '1'
+              ? {
+                  height: compactLesson1BoardHeight,
+                  marginBottom: 8,
+                }
+              : undefined
+          }
+        >
           <ItemContainer>
             {itens.map((item, index) => (
               <FeedItem
@@ -325,7 +335,6 @@ function Home({ route }) {
 
   return (
     <HomeContainer>
-      {/* ✅ Header agora fica condizente (tudo em state) */}
       <Header xpPoints={xpPoints} batutaPoints={batutaPoints} lifePoints={life} />
 
       <FlatList
@@ -333,9 +342,9 @@ function Home({ route }) {
         keyExtractor={(lesson) => lesson.lesson}
         renderItem={renderLessonBlock}
         showsVerticalScrollIndicator={false}
-        scrollEnabled={!licao2Bloqueada}
+        scrollEnabled={licao2Bloqueada ? false : true}
         contentContainerStyle={{
-          paddingBottom: licao2Bloqueada ? 0 : 40,
+          paddingBottom: licao2Bloqueada ? 20 : 40,
         }}
       />
 

@@ -7,6 +7,7 @@ import AtivHeader from '../../../../components/ativHeader/AtivHeader';
 
 import {
   AtivContainer,
+  ContentContainer,
   AlternativasContainer,
   AlternativaContainer2,
   ButtonContainer,
@@ -62,15 +63,9 @@ function AtivFigPausas() {
   const xpRef = useRef(0);
 
   const teveGameOverRef = useRef(false);
-
-  // garante que a atividade só dê bônus UMA vez
   const bonusJaConcedidoRef = useRef(false);
 
   const questaoAtual = allAtividades[currentIndex];
-
-  // -----------------------------
-  //   Helpers
-  // -----------------------------
 
   const getImages = (imagem) => {
     switch (imagem) {
@@ -99,10 +94,6 @@ function AtivFigPausas() {
   const handleSelectAlternative = (alternativa) => {
     setRespostaSelecionada(alternativa);
   };
-
-  // -----------------------------
-  //   Navegação / Resumo
-  // -----------------------------
 
   const calcularResumo = () => {
     const totalQuestoes = allAtividades.length;
@@ -159,10 +150,6 @@ function AtivFigPausas() {
     });
   };
 
-  // -----------------------------
-  //   Lógica de vidas
-  // -----------------------------
-
   const aplicarPerdaDeVida = () => {
     let vidasAntes = 2;
 
@@ -184,10 +171,6 @@ function AtivFigPausas() {
 
     return false;
   };
-
-  // -----------------------------
-  //   Botões
-  // -----------------------------
 
   const handleConfirm = () => {
     if (!respostaSelecionada) {
@@ -243,10 +226,6 @@ function AtivFigPausas() {
     }
   };
 
-  // -----------------------------
-  //   Render
-  // -----------------------------
-
   const renderAlternativaFigura = (alternativa, imagem) => {
     const isSelected = respostaSelecionada === alternativa;
 
@@ -289,7 +268,11 @@ function AtivFigPausas() {
       <QuestaoText>{questaoAtual.questao}</QuestaoText>
 
       <AlternativasContainer
-        style={tipoQuestao === 'texto' ? { flexDirection: 'column' } : null}
+        style={
+          tipoQuestao === 'texto'
+            ? { flexDirection: 'column', flexWrap: 'nowrap', justifyContent: 'flex-start' }
+            : null
+        }
       >
         {questaoAtual.opcoes.map((item) =>
           tipoQuestao === 'texto'
@@ -299,10 +282,6 @@ function AtivFigPausas() {
       </AlternativasContainer>
     </View>
   );
-
-  // -----------------------------
-  //   Recomeçar / Sair
-  // -----------------------------
 
   const handleRecomecar = () => {
     acertosRef.current = 0;
@@ -350,12 +329,7 @@ function AtivFigPausas() {
     });
   };
 
-  // progresso da barra
   const progress = (currentIndex + 1) / allAtividades.length;
-
-  // -----------------------------
-  //   JSX
-  // -----------------------------
 
   return (
     <AtivContainer>
@@ -367,12 +341,15 @@ function AtivFigPausas() {
 
       <NivelIndicator nivel={questaoAtual?.nivel} />
 
-      <FlatList
-        data={[questaoAtual]}
-        keyExtractor={(item) => item.id}
-        renderItem={renderQuestao}
-        showsVerticalScrollIndicator={false}
-      />
+      <ContentContainer>
+        <FlatList
+          data={[questaoAtual]}
+          keyExtractor={(item) => item.id}
+          renderItem={renderQuestao}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 8 }}
+        />
+      </ContentContainer>
 
       <ButtonContainer>
         <SkipButton onPress={handleSkip} />

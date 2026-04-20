@@ -7,6 +7,7 @@ import AtivHeader from '../../../../components/ativHeader/AtivHeader';
 
 import {
   AtivContainer,
+  ContentContainer,
   AlternativasContainer,
   AlternativaContainer2,
   ButtonContainer,
@@ -65,15 +66,9 @@ function AtivNotas() {
   const xpRef = useRef(0);
 
   const teveGameOverRef = useRef(false);
-
-  // NOVO → garante bônus apenas uma vez nessa atividade
   const bonusJaConcedidoRef = useRef(false);
 
   const questaoAtual = allAtividades[currentIndex];
-
-  // -----------------------------
-  // HELPERS
-  // -----------------------------
 
   const getImages = (imagem) => {
     switch (imagem) {
@@ -96,17 +91,9 @@ function AtivNotas() {
 
   const tipoQuestao = tipoQuestaoRaw === 'texto' ? 'texto' : 'figura';
 
-  // -----------------------------
-  // SELEÇÃO DE ALTERNATIVAS
-  // -----------------------------
-
   const handleSelectAlternative = (alternativa) => {
     setRespostaSelecionada(alternativa);
   };
-
-  // -----------------------------
-  // RESUMO E CÁLCULO FINAL
-  // -----------------------------
 
   const calcularResumo = () => {
     const totalQuestoes = allAtividades.length;
@@ -125,7 +112,6 @@ function AtivNotas() {
 
     const acertouTudo = acertos === totalQuestoes;
 
-    // NOVA REGRA (igual o AtivClave):
     const podeGanharBonus =
       aprovado &&
       acertouTudo &&
@@ -148,7 +134,6 @@ function AtivNotas() {
   const mostrarResumoFinal = () => {
     const resultado = calcularResumo();
 
-    // Marca que bônus já foi dado
     if (resultado.bonusVida) {
       bonusJaConcedidoRef.current = true;
     }
@@ -165,10 +150,6 @@ function AtivNotas() {
       params: { resultadoAtividade: resumoDados },
     });
   };
-
-  // -----------------------------
-  //   LÓGICA DE VIDAS
-  // -----------------------------
 
   const aplicarPerdaDeVida = () => {
     let vidasAntes = 2;
@@ -191,10 +172,6 @@ function AtivNotas() {
 
     return false;
   };
-
-  // -----------------------------
-  //   BOTÕES
-  // -----------------------------
 
   const handleConfirm = () => {
     if (!respostaSelecionada) {
@@ -225,7 +202,7 @@ function AtivNotas() {
     setFeedbackVisible(false);
 
     if (currentIndex + 1 < allAtividades.length) {
-      setCurrentIndex(currentIndex + 1);
+      setCurrentIndex((prev) => prev + 1);
       setRespostaSelecionada(null);
     } else {
       mostrarResumoFinal();
@@ -238,16 +215,12 @@ function AtivNotas() {
     if (aplicarPerdaDeVida()) return;
 
     if (currentIndex + 1 < allAtividades.length) {
-      setCurrentIndex(currentIndex + 1);
+      setCurrentIndex((prev) => prev + 1);
       setRespostaSelecionada(null);
     } else {
       mostrarResumoFinal();
     }
   };
-
-  // -----------------------------
-  //   RENDER QUESTÃO
-  // -----------------------------
 
   const renderAlternativaFigura = (alternativa, imagem) => {
     const isSelected = respostaSelecionada === alternativa;
@@ -291,7 +264,11 @@ function AtivNotas() {
       <QuestaoText>{questaoAtual.questao}</QuestaoText>
 
       <AlternativasContainer
-        style={tipoQuestao === 'texto' ? { flexDirection: 'column' } : null}
+        style={
+          tipoQuestao === 'texto'
+            ? { flexDirection: 'column', flexWrap: 'nowrap', justifyContent: 'flex-start' }
+            : null
+        }
       >
         {questaoAtual.opcoes.map((item) =>
           tipoQuestao === 'texto'
@@ -301,10 +278,6 @@ function AtivNotas() {
       </AlternativasContainer>
     </View>
   );
-
-  // -----------------------------
-  //   RECOMEÇAR / SAIR
-  // -----------------------------
 
   const handleRecomecar = () => {
     acertosRef.current = 0;
@@ -332,9 +305,6 @@ function AtivNotas() {
     setResumoVisible(false);
     setFeedbackVisible(false);
     setRespostaSelecionada(null);
-
-    // continua marcado: não dá mais bônus
-    // teveGameOverRef.current = true;
   };
 
   const handleCloseActivity = () => {
@@ -355,10 +325,6 @@ function AtivNotas() {
 
   const progress = (currentIndex + 1) / allAtividades.length;
 
-  // -----------------------------
-  //   JSX
-  // -----------------------------
-
   return (
     <AtivContainer>
       <AtivHeader
@@ -369,12 +335,15 @@ function AtivNotas() {
 
       <NivelIndicator nivel={questaoAtual?.nivel} />
 
-      <FlatList
-        data={[questaoAtual]}
-        keyExtractor={(item) => item.id}
-        renderItem={renderQuestao}
-        showsVerticalScrollIndicator={false}
-      />
+      <ContentContainer>
+        <FlatList
+          data={[questaoAtual]}
+          keyExtractor={(item) => item.id}
+          renderItem={renderQuestao}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 8 }}
+        />
+      </ContentContainer>
 
       <ButtonContainer>
         <SkipButton onPress={handleSkip} />
