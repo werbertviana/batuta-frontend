@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { FlatList, View, TouchableOpacity, Dimensions } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
@@ -59,6 +60,18 @@ function getResultadoId(resultado) {
   return `resultado-${Date.now()}-${resultadoSeq}`;
 }
 
+function getBonusStorageKey(userId) {
+  return `batuta_bonus_activities_${userId}`;
+}
+
+function getCompletedStorageKey(userId) {
+  return `batuta_completed_activities_${userId}`;
+}
+
+function getBatutaStorageKey(userId) {
+  return `batuta_rewarded_lessons_${userId}`;
+}
+
 function Home({ route }) {
   const navigation = useNavigation();
   const { user, updateGameStats } = useAuth();
@@ -72,19 +85,28 @@ function Home({ route }) {
   const [batutaPoints, setBatutaPoints] = useState(() => batutaGlobal);
   const [xpPoints, setXpPoints] = useState(() => xpGlobal);
 
+  const [storageReady, setStorageReady] = useState(false);
+
   useEffect(() => {
-    if (!currentUser?.gameStats) return;
+    const hydrateUserSession = async () => {
+      if (!currentUser?.gameStats || !currentUser?.id) return;
 
-    const userId = currentUser.id;
-    const changedUser = lastUserId !== userId;
+      const userId = currentUser.id;
+      const changedUser = lastUserId !== userId;
 
-    if (changedUser) {
+      if (!changedUser) {
+        setStorageReady(true);
+        console.log('[HOME] mesmo usuário - não reinit do backend:', userId);
+        return;
+      }
+
       lastUserId = userId;
 
       atividadesComBonus.clear();
       atividadesConcluidas.clear();
       licoesComBatuta.clear();
       resultadoSeq = 0;
+      setStorageReady(false);
 
       xpGlobal = Number(currentUser.gameStats.xpPoints || 0);
       setXpPoints(xpGlobal);
@@ -100,6 +122,26 @@ function Home({ route }) {
       nivelGlobal = backendNivel;
       setNivel(backendNivel);
 
+      try {
+        const [bonusRaw, completedRaw, batutaRaw] = await Promise.all([
+          AsyncStorage.getItem(getBonusStorageKey(userId)),
+          AsyncStorage.getItem(getCompletedStorageKey(userId)),
+          AsyncStorage.getItem(getBatutaStorageKey(userId)),
+        ]);
+
+        const bonusList = bonusRaw ? JSON.parse(bonusRaw) : [];
+        const completedList = completedRaw ? JSON.parse(completedRaw) : [];
+        const batutaList = batutaRaw ? JSON.parse(batutaRaw) : [];
+
+        bonusList.forEach((id) => atividadesComBonus.add(id));
+        completedList.forEach((id) => atividadesConcluidas.add(id));
+        batutaList.forEach((id) => licoesComBatuta.add(id));
+      } catch (error) {
+        console.log('[HOME] erro ao carregar progresso local:', error);
+      }
+
+      setStorageReady(true);
+
       console.log('[HOME] init backend (novo usuário):', {
         userId,
         backendNivel,
@@ -107,9 +149,9 @@ function Home({ route }) {
         batutaGlobal,
         backendLife,
       });
-    } else {
-      console.log('[HOME] mesmo usuário - não reinit do backend:', userId);
-    }
+    };
+
+    hydrateUserSession();
   }, [currentUser?.id, currentUser?.gameStats]);
 
   const lesson1 = staticFeeds.feeds.find((l) => l.lesson === '1');
@@ -122,7 +164,6 @@ function Home({ route }) {
   const licao2Concluida = nivel > (totalItensLicao1 + totalItensLicao2);
   const licao2Bloqueada = !licao1Concluida;
 
-  // tamanhos responsivos quando a lição 02 estiver bloqueada
   const compactLesson1IconWidth = Math.min(width * 0.68, 260);
   const compactLesson1IconHeight = Math.min(height * 0.12, 110);
   const compactLesson1BoardHeight = Math.min(height * 0.55, 400);
@@ -135,93 +176,137 @@ function Home({ route }) {
 
   useFocusEffect(
     useCallback(() => {
-      const resultado = route?.params?.resultadoAtividade;
-      if (!resultado) return;
+      const processResultado = async () => {
+        const resultado = route?.params?.resultadoAtividade;
+        if (!resultado || !currentUser?.id || !storageReady) return;
 
-      console.log('[HOME] resultadoAtividade recebido:', resultado);
+        console.log('[HOME] resultadoAtividade recebido:', resultado);
 
-      const resultadoId = getResultadoId(resultado);
+        const userId = currentUser.id;
+        const resultadoId = getResultadoId(resultado);
 
-      // XP
-      if (resultado.xpGanho) {
-        xpGlobal += resultado.xpGanho;
-        setXpPoints(xpGlobal);
-      }
-
-      // VIDA
-      let novaVida = getLifeGlobal();
-
-      if (typeof resultado.vidasRestantes === 'number') {
-        novaVida = Math.max(0, resultado.vidasRestantes);
-      }
-
-      if (resultado.bonusVida) {
-        if (!atividadesComBonus.has(resultadoId)) {
-          atividadesComBonus.add(resultadoId);
-          novaVida += 1;
-          setBonusModalVisible(true);
+        if (resultado.xpGanho) {
+          xpGlobal += resultado.xpGanho;
+          setXpPoints(xpGlobal);
         }
-      }
 
-      setLifeGlobal(novaVida);
-      setLife(novaVida);
+        let novaVida = getLifeGlobal();
 
-      // NÍVEL
-      const deveSubirNivel =
-        resultado?.concluida === true || resultado?.aprovado === true;
+        if (typeof resultado.vidasRestantes === 'number') {
+          novaVida = Math.max(0, resultado.vidasRestantes);
+        }
 
-      let nextNivel = nivelGlobal ?? nivel;
+        if (resultado.bonusVida) {
+          if (!atividadesComBonus.has(resultadoId)) {
+            atividadesComBonus.add(resultadoId);
+            novaVida += 1;
+            setBonusModalVisible(true);
 
-      if (deveSubirNivel) {
-        if (!atividadesConcluidas.has(resultadoId)) {
-          atividadesConcluidas.add(resultadoId);
+            try {
+              await AsyncStorage.setItem(
+                getBonusStorageKey(userId),
+                JSON.stringify([...atividadesComBonus])
+              );
+            } catch (error) {
+              console.log('[HOME] erro ao salvar bônus local:', error);
+            }
+          } else {
+            console.log('[HOME] bônus já concedido anteriormente para:', resultadoId);
+          }
+        }
 
-          nextNivel = (nivelGlobal ?? nivel) + 1;
-          nivelGlobal = nextNivel;
-          setNivel(nextNivel);
+        setLifeGlobal(novaVida);
+        setLife(novaVida);
 
-          console.log('[HOME] nível subiu para:', nextNivel, 'via', resultadoId);
+        const deveSubirNivel =
+          resultado?.concluida === true || resultado?.aprovado === true;
+
+        let nextNivel = nivelGlobal ?? nivel;
+
+        if (deveSubirNivel) {
+          if (!atividadesConcluidas.has(resultadoId)) {
+            atividadesConcluidas.add(resultadoId);
+
+            nextNivel = (nivelGlobal ?? nivel) + 1;
+            nivelGlobal = nextNivel;
+            setNivel(nextNivel);
+
+            try {
+              await AsyncStorage.setItem(
+                getCompletedStorageKey(userId),
+                JSON.stringify([...atividadesConcluidas])
+              );
+            } catch (error) {
+              console.log('[HOME] erro ao salvar conclusão local:', error);
+            }
+
+            console.log('[HOME] nível subiu para:', nextNivel, 'via', resultadoId);
+          } else {
+            console.log('[HOME] ignorado (já concluída anteriormente):', resultadoId);
+          }
         } else {
-          console.log('[HOME] ignorado (já concluída na sessão):', resultadoId);
+          console.log('[HOME] não subiu nível (concluida/aprovado false):', resultadoId);
         }
-      } else {
-        console.log('[HOME] não subiu nível (concluida/aprovado false):', resultadoId);
-      }
 
-      updateGameStats({
-        nivel: String(nivelGlobal ?? nextNivel),
-        xpPoints: Number(xpGlobal || 0),
-        lifePoints: Number(novaVida || 0),
-        batutaPoints: Number(batutaGlobal || 0),
-      });
+        updateGameStats({
+          nivel: String(nivelGlobal ?? nextNivel),
+          xpPoints: Number(xpGlobal || 0),
+          lifePoints: Number(novaVida || 0),
+          batutaPoints: Number(batutaGlobal || 0),
+        });
 
-      navigation.setParams({ resultadoAtividade: undefined });
-    }, [route?.params?.resultadoAtividade, navigation, updateGameStats, nivel])
+        navigation.setParams({ resultadoAtividade: undefined });
+      };
+
+      processResultado();
+    }, [
+      route?.params?.resultadoAtividade,
+      navigation,
+      updateGameStats,
+      nivel,
+      currentUser?.id,
+      storageReady,
+    ])
   );
 
   useEffect(() => {
-    let changed = false;
+    const persistBatuta = async () => {
+      if (!currentUser?.id || !storageReady) return;
 
-    if (licao1Concluida && !licoesComBatuta.has('lesson-1')) {
-      licoesComBatuta.add('lesson-1');
-      batutaGlobal += 1;
-      setBatutaPoints(batutaGlobal);
-      changed = true;
-    }
+      let changed = false;
 
-    if (licao2Concluida && !licoesComBatuta.has('lesson-2')) {
-      licoesComBatuta.add('lesson-2');
-      batutaGlobal += 1;
-      setBatutaPoints(batutaGlobal);
-      changed = true;
-    }
+      if (licao1Concluida && !licoesComBatuta.has('lesson-1')) {
+        licoesComBatuta.add('lesson-1');
+        batutaGlobal += 1;
+        setBatutaPoints(batutaGlobal);
+        changed = true;
+      }
 
-    if (changed) {
-      updateGameStats({
-        batutaPoints: Number(batutaGlobal || 0),
-      });
-    }
-  }, [licao1Concluida, licao2Concluida, updateGameStats]);
+      if (licao2Concluida && !licoesComBatuta.has('lesson-2')) {
+        licoesComBatuta.add('lesson-2');
+        batutaGlobal += 1;
+        setBatutaPoints(batutaGlobal);
+        changed = true;
+      }
+
+      if (changed) {
+        try {
+          await AsyncStorage.setItem(
+            getBatutaStorageKey(currentUser.id),
+            JSON.stringify([...licoesComBatuta])
+          );
+        } catch (error) {
+          console.log('[HOME] erro ao salvar recompensas de lição:', error);
+        }
+
+        updateGameStats({
+          batutaPoints: Number(batutaGlobal || 0),
+        });
+      }
+    };
+
+    persistBatuta();
+  }, [licao1Concluida, licao2Concluida, updateGameStats, currentUser?.id, storageReady]);
 
   const getLessonIcon = (lessonNumber) => {
     if (lessonNumber === '1') return Licao01;
@@ -288,7 +373,9 @@ function Home({ route }) {
     }
 
     return (
-      <FeedContainer style={licao2Bloqueada ? { marginTop: Math.max(height * 0.02, 20) } : undefined}>
+      <FeedContainer
+        style={licao2Bloqueada ? { marginTop: Math.max(height * 0.02, 20) } : undefined}
+      >
         <LessonContainer>
           <IconLesson
             resizeMode="contain"

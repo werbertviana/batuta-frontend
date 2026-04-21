@@ -54,12 +54,12 @@ export default function BonusLifeModal({ visible, onClose }) {
     >
       <Overlay>
         <Container>
-          <Title>Parabéns! 🎉</Title>
+          <Title>Performance impecável! 🎤</Title>
 
           <Message>
-            Você concluiu a atividade sem perder todas as vidas
-            e ganhou{'\n'}
-            <Message style={{ fontWeight: 'GothamCondensed-Bold',fontSize: 28 }}>+ 1 ponto de vida!</Message>
+            Você concluiu esta atividade sem perder vidas e ganhou:{'\n\n'}
+            <Message style={{ fontWeight: 'GothamCondensed-Bold',fontSize: 28}}>❤️ + 1 ponto de vida!{'\n\n'}</Message>
+            <Message style={{ fontSize: 22 }}>Obs.: Bônus único por atividade.</Message>
           </Message>
 
           <Button onPress={onClose}>
