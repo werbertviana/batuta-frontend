@@ -16,16 +16,23 @@ export const Container = styled.View`
 `;
 
 export const Title = styled.Text`
-  font-family: 'GothamCondensed-Medium';
-  font-size: 28px;
+  font-family: 'GothamCondensed-Bold';
+  font-size: 30px;
   text-align: center;
   color: #e74c3c;
   margin-bottom: 12px;
 `;
 
 export const Message = styled.Text`
+  font-family: 'GothamCondensed-Book';
+  font-size: 25px;
+  text-align: center;
+  color: #555555;
+`;
+
+export const Message2 = styled.Text`
   font-family: 'GothamCondensed-Medium';
-  font-size: 20px;
+  font-size: 25px;
   text-align: center;
   color: #555555;
 `;

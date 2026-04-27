@@ -1,12 +1,47 @@
 import React from 'react';
-import { SkipView, SkipText } from './SkipButtonStyles';  
 
-const SkipButton = ({ onPress, children }) => {
+import {
+  SkipView,
+  SkipContent,
+  SkipText,
+  SkipDivider,
+  SkipCounter,
+} from './SkipButtonStyles';
+
+const SkipButton = ({
+  onPress,
+  children,
+  disabled = false,
+  usedSkips,
+  maxSkips,
+  onDisabledPress,
+}) => {
+  const hasCounter =
+    typeof usedSkips === 'number' && typeof maxSkips === 'number';
+
+  const handlePress = () => {
+    if (disabled) {
+      if (onDisabledPress) onDisabledPress();
+      return;
+    }
+
+    if (onPress) onPress();
+  };
+
   return (
-    <SkipView onPress={onPress} activeOpacity={0.8}>
-      <SkipText>
-        {children || 'PULAR'}
-      </SkipText>
+    <SkipView onPress={handlePress} activeOpacity={0.8} disabled={false} isDisabled={disabled}>
+      <SkipContent>
+        <SkipText disabled={disabled}>{children || 'PULAR'}</SkipText>
+
+        {hasCounter && (
+          <>
+            <SkipDivider disabled={disabled} />
+            <SkipCounter disabled={disabled}>
+              {usedSkips}/{maxSkips}
+            </SkipCounter>
+          </>
+        )}
+      </SkipContent>
     </SkipView>
   );
 };

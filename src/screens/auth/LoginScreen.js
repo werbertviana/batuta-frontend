@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Platform, KeyboardAvoidingView, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useAuth } from '../../contexts/AuthContext'; // importando o AuthContext
+import { useAuth } from '../../contexts/AuthContext';
 
 import {
   Background,
@@ -22,29 +22,22 @@ import {
   ButtonText,
 } from './LoginStyles';
 
-// Ajuste o caminho da logo dourada
 import LogoBatuta from '../../assets/images/logo/logo.png';
-// Ajuste o caminho do background gerado
 import LoginBackground from '../../assets/images/login/login-background.png';
 
 export default function LoginScreen() {
-  const { login } = useAuth(); // Usando o contexto para fazer o login
+  const { login } = useAuth();
   const navigation = useNavigation();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // ✅ Ajuste baseURL conforme onde você testa:
-  // Android Emulator: 10.0.2.2
-  // iOS Simulator: localhost
-  // Celular físico: IP do seu PC na rede (ex: 192.168.0.10)
   const API_BASE =
     Platform.OS === 'android'
       ? 'http://10.0.2.2:3000/api'
       : 'http://localhost:3000/api';
 
   const handleLogin = async () => {
-    // validação simples no client (sem mudar layout)
     if (!email.trim() || !senha.trim()) {
       Alert.alert('Atenção', 'Informe email e senha.');
       return;
@@ -62,7 +55,6 @@ export default function LoginScreen() {
         }),
       });
 
-      // tenta ler JSON (tanto sucesso quanto erro)
       let data = null;
       try {
         data = await response.json();
@@ -82,14 +74,11 @@ export default function LoginScreen() {
         return;
       }
 
-      // ✅ Aqui você recebeu o mesmo JSON do Insomnia:
-      // { id, name, email, gameStats: { lifePoints, batutaPoints, xpPoints, elo, nivel } }
+      // { id, name, email, gameStats: { lifePoints, batutaPoints, xpPoints, elo, progressLevel } }
       console.log('LOGIN OK (user):', data);
 
-      // ✅ Salva o usuário no contexto global (AuthContext)
       login(data);
 
-      // ✅ Abre a Home depois do login (e remove o Login do histórico)
       navigation.reset({
         index: 0,
         routes: [{ name: 'Tab' }],
@@ -106,7 +95,7 @@ export default function LoginScreen() {
   };
 
   const handleCreateAccount = () => {
-    navigation.navigate('Signup'); // ajuste o nome da rota se for diferente
+    navigation.navigate('Signup');
   };
 
   const handleForgotPassword = () => {
@@ -119,14 +108,11 @@ export default function LoginScreen() {
         style={{ flex: 1, width: '100%', alignItems: 'center' }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        {/* LOGO */}
         <LogoContainer>
           <LogoImage source={LogoBatuta} resizeMode="contain" />
         </LogoContainer>
 
-        {/* FORMULÁRIO */}
         <Form>
-          {/* INPUT EMAIL */}
           <InputWrapper>
             <InputIconArea>
               <InputIconText>✉️</InputIconText>
@@ -143,7 +129,6 @@ export default function LoginScreen() {
             />
           </InputWrapper>
 
-          {/* INPUT SENHA */}
           <InputWrapper style={{ marginTop: 20 }}>
             <InputIconArea>
               <InputIconText>🔒</InputIconText>
@@ -159,13 +144,11 @@ export default function LoginScreen() {
             />
           </InputWrapper>
 
-          {/* ESQUECEU A SENHA */}
           <ForgotPasswordText onPress={handleForgotPassword}>
             Esqueceu a senha?
           </ForgotPasswordText>
         </Form>
 
-        {/* BOTÕES */}
         <ButtonsContainer>
           <PrimaryButton onPress={handleLogin} disabled={loading}>
             <ButtonText>{loading ? 'ENTRANDO...' : 'ENTRAR'}</ButtonText>

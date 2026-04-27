@@ -1,13 +1,25 @@
+// src/components/modal/LockedModal.js
+
 import React from 'react';
-import { Modal, View, TouchableOpacity, Text } from 'react-native';
+import { Modal } from 'react-native';
+
 import {
+  Overlay,
   LockedContainer,
+  LockedIconWrapper,
   LockedIcon,
+  LockedTitle,
   LockedMessage,
   LockedButton,
+  LockedButtonText,
 } from './LockedModalStyles';
 
-function LockedModal({ visible, onClose }) {
+function LockedModal({
+  visible,
+  onClose,
+  title = 'Conteúdo bloqueado',
+  message = 'Complete a atividade anterior para desbloquear este conteúdo.',
+}) {
   return (
     <Modal
       visible={visible}
@@ -15,40 +27,24 @@ function LockedModal({ visible, onClose }) {
       animationType="fade"
       onRequestClose={onClose}
     >
-      {/* Overlay escuro por trás */}
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.6)',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
+      <Overlay>
         <LockedContainer>
-          <LockedIcon
-            source={require('../../assets/icons/lock.png')}
-            resizeMode="contain"
-          />
+          <LockedIconWrapper>
+            <LockedIcon
+              source={require('../../assets/icons/lock.png')}
+              resizeMode="contain"
+            />
+          </LockedIconWrapper>
 
-          <LockedMessage>
-            Complete a lição anterior para desbloquear este conteúdo.
-          </LockedMessage>
+          <LockedTitle>{title}</LockedTitle>
 
-          <TouchableOpacity onPress={onClose}>
-            <LockedButton>
-              <Text
-                style={{
-                  color: 'white',
-                  fontWeight: 'bold',
-                  fontSize: 16,
-                }}
-              >
-                OK
-              </Text>
-            </LockedButton>
-          </TouchableOpacity>
+          <LockedMessage>{message}</LockedMessage>
+
+          <LockedButton activeOpacity={0.85} onPress={onClose}>
+            <LockedButtonText>CONTINUAR</LockedButtonText>
+          </LockedButton>
         </LockedContainer>
-      </View>
+      </Overlay>
     </Modal>
   );
 }

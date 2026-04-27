@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Modal, View } from 'react-native';
+import { Modal, View, Text } from 'react-native';
 import Sound from 'react-native-sound';
 
 import {
@@ -18,6 +18,7 @@ import {
   ActionButtonText,
   ActionButton2,
   Divider,
+  Divider2,
 } from './ResumoAtividadeModalStyles';
 
 import CheckIcon from '../../assets/icons/check.png';
@@ -40,16 +41,13 @@ export default function ResumoAtividadeModal({
   onRecomecar,
   onContinuar,
 }) {
-  // Configura categoria do áudio (uma vez)
   useEffect(() => {
     Sound.setCategory('Playback');
   }, []);
 
-  // calcula aprovado mesmo que resumoDados ainda seja undefined
   const percentualAcerto = resumoDados?.percentualAcerto ?? 0;
   const aprovado = percentualAcerto >= 50;
 
-  // Tocar win2 ou fail ao abrir o modal de resumo, conforme aprovado
   useEffect(() => {
     if (!visible || !resumoDados) return;
 
@@ -69,7 +67,6 @@ export default function ResumoAtividadeModal({
       });
     });
 
-    // Cleanup caso o modal feche antes do fim
     return () => {
       try {
         sound.stop(() => sound.release());
@@ -77,10 +74,15 @@ export default function ResumoAtividadeModal({
     };
   }, [visible, aprovado, resumoDados]);
 
-  // ⚠️ Só agora fazemos o early return
   if (!resumoDados) return null;
 
-  const { totalQuestoes, acertos, erros } = resumoDados;
+  const {
+    acertos,
+    erros,
+    xpGanho = 0,
+    xpBaseGanho = 0,
+    xpBonusGanho = 0,
+  } = resumoDados;
 
   const handleRecomecarPress = () => {
     if (onRecomecar) onRecomecar();
@@ -90,6 +92,8 @@ export default function ResumoAtividadeModal({
     if (onContinuar) onContinuar();
     else if (onClose) onClose();
   };
+
+  const mostrarComposicaoXp = xpBaseGanho > 0 || xpBonusGanho > 0;
 
   return (
     <Modal
@@ -108,6 +112,7 @@ export default function ResumoAtividadeModal({
                 <MessageText variant="success">
                   Parabéns! Você mandou muito bem! 🎉
                 </MessageText>
+
                 <MessageSubText>
                   Com {formatPercent(percentualAcerto)} de aproveitamento, você está
                   avançando na sua jornada musical.
@@ -118,6 +123,7 @@ export default function ResumoAtividadeModal({
                 <MessageText variant="fail">
                   Boa tentativa! Não desanime. 🚀
                 </MessageText>
+
                 <MessageSubText>
                   Para avançar, você precisa de pelo menos 50% de acertos.
                   Que tal tentar de novo e melhorar seu resultado?
@@ -128,11 +134,14 @@ export default function ResumoAtividadeModal({
 
           <InfoBox>
             <InfoLabel>Acertos</InfoLabel>
+
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <InfoValue>{acertos}</InfoValue>
               <InfoIcon source={CheckIcon} resizeMode="contain" />
             </View>
           </InfoBox>
+
+          <Divider2 />
 
           <InfoBox>
             <InfoLabel>Erros</InfoLabel>
@@ -142,15 +151,37 @@ export default function ResumoAtividadeModal({
             </View>
           </InfoBox>
 
-          {resumoDados?.xpGanho !== undefined && (
+          <Divider2 />
+
+          <View>
             <InfoBox>
               <InfoLabel>XP ganho</InfoLabel>
+
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <InfoValue>{resumoDados.xpGanho}</InfoValue>
+                <InfoValue>{xpGanho}</InfoValue>
                 <InfoIcon source={XpIcon} resizeMode="contain" />
               </View>
             </InfoBox>
-          )}
+
+            {mostrarComposicaoXp && (
+              <MessageSubText
+                style={{
+                  textAlign: 'center',
+                  marginTop: 4,
+                  marginBottom: 2,
+                  fontSize: 20,
+                  color: '#777',
+                }}
+              >
+                {xpBaseGanho} XP da atividade
+                {xpBonusGanho > 0 ? (
+                  <Text style={{ color: '#777' }}>
+                    {' '}+ <Text style={{ color: '#F4B400', fontFamily: 'GothamCondensed-Bold' }}>{xpBonusGanho} XP bônus</Text>
+                  </Text>
+                ) : null}
+              </MessageSubText>
+            )}
+          </View>
 
           <Divider />
 

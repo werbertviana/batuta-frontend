@@ -13,6 +13,7 @@ import {
   ActionButtonText,
   ActionButtonText2,
   ButtonsRow,
+  Message2
 } from './LifeLostModalStyles';
 
 const failSound = require('../../assets/sounds/feedback/fail.mp3');
@@ -57,10 +58,12 @@ export default function LifeLostModal({ visible, onConfirm, onExit }) {
         <Container>
           <Title>Você ficou sem vidas! ❤️‍🩹</Title>
 
-          <Message style={{ fontWeight: 'GothamCondensed-Bold'}}>
-            O limite de erros desta atividade foi atingido.{'\n\n'}
-            Deseja tentar novamente com {'\n'} mais 2 chances? 🔄
+          <Message>
+            O limite de erros desta atividade foi atingido.{'\n'}
           </Message>
+          <Message2>
+            Deseja tentar novamente com {'\n'} mais 2 chances? 🔄
+          </Message2>
 
           <Divider />
 

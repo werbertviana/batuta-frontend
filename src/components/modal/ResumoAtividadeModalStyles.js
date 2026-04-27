@@ -16,10 +16,10 @@ export const Container = styled.View`
 `;
 
 export const Title = styled.Text`
-  font-family: 'GothamCondensed-Medium';
+  font-family: 'GothamCondensed-Bold';
   font-size: 28px;
   text-align: center;
-  color: black;
+  color: #333333;
   margin-bottom: 16px;
 `;
 
@@ -36,8 +36,8 @@ export const MessageText = styled.Text`
 `;
 
 export const MessageSubText = styled.Text`
-  font-family: 'GothamCondensed-Medium';
-  font-size: 18px;
+  font-family: 'GothamCondensed-Book';
+  font-size: 20px;
   text-align: center;
   color: #333333;
 `;
@@ -77,12 +77,18 @@ export const XPValue = styled.Text`
   color: #333333;
 `;
 
-/* Linha separadora acima dos botões */
 export const Divider = styled.View`
   height: 2px;
   background-color: #e0e0e0;
-  margin-top: 16px;
+  margin-top: 10px;
   margin-bottom: 12px;
+`;
+
+export const Divider2 = styled.View`
+  height: 2px;
+  background-color: #e0e0e0;
+  margin-top: 4px;
+  margin-bottom: 4px;
 `;
 
 export const ButtonsRow = styled.View`

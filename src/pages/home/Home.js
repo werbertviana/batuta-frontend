@@ -1,6 +1,7 @@
+// src/screens/home/Home.js
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { FlatList, View, TouchableOpacity, Dimensions } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
@@ -24,6 +25,7 @@ import Licao02Inactive from '../../assets/images/home/licao02_inactive.png';
 
 import LockedModal from '../../components/modal/LockedModal';
 import BonusLifeModal from '../../components/modal/BonusLifeModal';
+import EloUpModal from '../../components/modal/EloUpModal';
 
 import { getLifeGlobal, setLifeGlobal } from '../../store/lifeStore';
 
@@ -31,138 +33,157 @@ const Bg = require('../../assets/images/home/bg.png');
 
 const { width, height } = Dimensions.get('window');
 
-// globais da sessão
-let lastUserId = null;
-let nivelGlobal = null;
-let xpGlobal = 0;
-let batutaGlobal = 0;
-
-// controle por sessão
-const atividadesComBonus = new Set();
-const atividadesConcluidas = new Set();
-const licoesComBatuta = new Set();
-
-// fallback para garantir unicidade se vier tudo indefinido
-let resultadoSeq = 0;
-
-function getResultadoId(resultado) {
-  const raw =
-    resultado?.atividadeId ||
-    resultado?.atividade ||
-    resultado?.practiceRoute ||
-    (resultado?.lesson && resultado?.itemId
-      ? `lesson-${resultado.lesson}-item-${resultado.itemId}`
-      : null);
-
-  if (raw && String(raw).trim()) return String(raw);
-
-  resultadoSeq += 1;
-  return `resultado-${Date.now()}-${resultadoSeq}`;
-}
-
-function getBonusStorageKey(userId) {
-  return `batuta_bonus_activities_${userId}`;
-}
-
-function getCompletedStorageKey(userId) {
-  return `batuta_completed_activities_${userId}`;
-}
-
-function getBatutaStorageKey(userId) {
-  return `batuta_rewarded_lessons_${userId}`;
-}
-
 function Home({ route }) {
   const navigation = useNavigation();
-  const { user, updateGameStats } = useAuth();
+  const { user } = useAuth();
   const currentUser = user;
 
-  const [lockedLessonVisible, setLockedLessonVisible] = useState(false);
+  const [lockedLessonInfo, setLockedLessonInfo] = useState({
+    visible: false,
+    lessonNumber: null,
+  });
+
   const [bonusModalVisible, setBonusModalVisible] = useState(false);
+  const [bonusReward, setBonusReward] = useState({
+    bonusVidaGanha: false,
+    bonusXpGanho: false,
+  });
 
-  const [nivel, setNivel] = useState(() => (nivelGlobal ?? 1));
+  const [eloModalVisible, setEloModalVisible] = useState(false);
+  const [eloReward, setEloReward] = useState({
+    eloAnterior: null,
+    eloAtual: null,
+  });
+
+  const [progressLevel, setProgressLevel] = useState(1);
   const [life, setLife] = useState(getLifeGlobal());
-  const [batutaPoints, setBatutaPoints] = useState(() => batutaGlobal);
-  const [xpPoints, setXpPoints] = useState(() => xpGlobal);
-
-  const [storageReady, setStorageReady] = useState(false);
+  const [batutaPoints, setBatutaPoints] = useState(0);
+  const [xpPoints, setXpPoints] = useState(0);
 
   useEffect(() => {
-    const hydrateUserSession = async () => {
-      if (!currentUser?.gameStats || !currentUser?.id) return;
+    if (!currentUser?.gameStats) return;
 
-      const userId = currentUser.id;
-      const changedUser = lastUserId !== userId;
+    const backendLife = Math.max(0, Number(currentUser.gameStats.lifePoints ?? 3));
+    const backendXp = Math.max(0, Number(currentUser.gameStats.xpPoints ?? 0));
+    const backendBatutas = Math.max(
+      0,
+      Number(currentUser.gameStats.batutaPoints ?? 0),
+    );
+    const backendProgressLevel = Math.max(
+      1,
+      Number(currentUser.gameStats.progressLevel ?? 1),
+    );
 
-      if (!changedUser) {
-        setStorageReady(true);
-        console.log('[HOME] mesmo usuário - não reinit do backend:', userId);
-        return;
-      }
-
-      lastUserId = userId;
-
-      atividadesComBonus.clear();
-      atividadesConcluidas.clear();
-      licoesComBatuta.clear();
-      resultadoSeq = 0;
-      setStorageReady(false);
-
-      xpGlobal = Number(currentUser.gameStats.xpPoints || 0);
-      setXpPoints(xpGlobal);
-
-      batutaGlobal = Number(currentUser.gameStats.batutaPoints || 0);
-      setBatutaPoints(batutaGlobal);
-
-      const backendLife = Math.max(0, Number(currentUser.gameStats.lifePoints ?? 3));
-      setLifeGlobal(backendLife);
-      setLife(backendLife);
-
-      const backendNivel = Math.max(1, Number(currentUser.gameStats.nivel || 1));
-      nivelGlobal = backendNivel;
-      setNivel(backendNivel);
-
-      try {
-        const [bonusRaw, completedRaw, batutaRaw] = await Promise.all([
-          AsyncStorage.getItem(getBonusStorageKey(userId)),
-          AsyncStorage.getItem(getCompletedStorageKey(userId)),
-          AsyncStorage.getItem(getBatutaStorageKey(userId)),
-        ]);
-
-        const bonusList = bonusRaw ? JSON.parse(bonusRaw) : [];
-        const completedList = completedRaw ? JSON.parse(completedRaw) : [];
-        const batutaList = batutaRaw ? JSON.parse(batutaRaw) : [];
-
-        bonusList.forEach((id) => atividadesComBonus.add(id));
-        completedList.forEach((id) => atividadesConcluidas.add(id));
-        batutaList.forEach((id) => licoesComBatuta.add(id));
-      } catch (error) {
-        console.log('[HOME] erro ao carregar progresso local:', error);
-      }
-
-      setStorageReady(true);
-
-      console.log('[HOME] init backend (novo usuário):', {
-        userId,
-        backendNivel,
-        xpGlobal,
-        batutaGlobal,
-        backendLife,
-      });
-    };
-
-    hydrateUserSession();
+    setLifeGlobal(backendLife);
+    setLife(backendLife);
+    setXpPoints(backendXp);
+    setBatutaPoints(backendBatutas);
+    setProgressLevel(backendProgressLevel);
   }, [currentUser?.id, currentUser?.gameStats]);
 
-  const lesson1 = staticFeeds.feeds.find((l) => l.lesson === '1');
-  const totalItensLicao1 = lesson1?.items?.length || 0;
+  useFocusEffect(
+    useCallback(() => {
+      const processResultado = async () => {
+        const resultado = route?.params?.resultadoAtividade;
+        if (!resultado) return;
 
-  const lesson2 = staticFeeds.feeds.find((l) => l.lesson === '2');
-  const totalItensLicao2 = lesson2?.items?.length || 0;
+        const reward = resultado?.reward ?? resultado;
+        const updatedUser = resultado?.user ?? null;
 
-  const licao1Concluida = nivel > totalItensLicao1;
-  const licao2Concluida = nivel > (totalItensLicao1 + totalItensLicao2);
-  const licao2Bloqueada = !licao1Concluida;
+        if (updatedUser?.gameStats) {
+          const backendLife = Math.max(
+            0,
+            Number(
+              updatedUser.gameStats.lifePoints ??
+                currentUser?.gameStats?.lifePoints ??
+                3,
+            ),
+          );
+
+          const backendXp = Math.max(
+            0,
+            Number(
+              updatedUser.gameStats.xpPoints ??
+                currentUser?.gameStats?.xpPoints ??
+                0,
+            ),
+          );
+
+          const backendBatutas = Math.max(
+            0,
+            Number(
+              updatedUser.gameStats.batutaPoints ??
+                currentUser?.gameStats?.batutaPoints ??
+                0,
+            ),
+          );
+
+          const backendProgressLevel = Math.max(
+            1,
+            Number(
+              updatedUser.gameStats.progressLevel ??
+                currentUser?.gameStats?.progressLevel ??
+                1,
+            ),
+          );
+
+          setLifeGlobal(backendLife);
+          setLife(backendLife);
+          setXpPoints(backendXp);
+          setBatutaPoints(backendBatutas);
+          setProgressLevel(backendProgressLevel);
+        }
+
+        const hasBonusLife = !!reward?.bonusVidaGanha;
+        const hasBonusXp = !!reward?.bonusXpGanho;
+        const hasEloUp = !!reward?.subiuElo;
+
+        if (hasEloUp) {
+          setEloReward({
+            eloAnterior: reward?.eloAnterior ?? null,
+            eloAtual: reward?.eloAtual ?? null,
+          });
+        }
+
+        if (hasBonusLife || hasBonusXp) {
+          setBonusReward({
+            bonusVidaGanha: hasBonusLife,
+            bonusXpGanho: hasBonusXp,
+          });
+          setBonusModalVisible(true);
+        } else if (hasEloUp) {
+          setEloModalVisible(true);
+        }
+
+        navigation.setParams({ resultadoAtividade: undefined });
+      };
+
+      processResultado();
+    }, [route?.params?.resultadoAtividade, navigation, currentUser?.gameStats]),
+  );
+
+  const getLessonTotalItemsBefore = (lessonNumber) => {
+    return staticFeeds.feeds
+      .filter((lesson) => Number(lesson.lesson) < Number(lessonNumber))
+      .reduce((total, lesson) => total + (lesson.items?.length || 0), 0);
+  };
+
+  const getLessonTotalItemsUntil = (lessonNumber) => {
+    return staticFeeds.feeds
+      .filter((lesson) => Number(lesson.lesson) <= Number(lessonNumber))
+      .reduce((total, lesson) => total + (lesson.items?.length || 0), 0);
+  };
+
+  const isLessonUnlocked = (lessonNumber) => {
+    if (Number(lessonNumber) === 1) return true;
+
+    const previousLessonsTotal = getLessonTotalItemsBefore(lessonNumber);
+    return progressLevel > previousLessonsTotal;
+  };
+
+  const isLessonBlocked = (lessonNumber) => !isLessonUnlocked(lessonNumber);
+
+  const isOnlyLesson2Blocked = isLessonBlocked('2');
 
   const compactLesson1IconWidth = Math.min(width * 0.68, 260);
   const compactLesson1IconHeight = Math.min(height * 0.12, 110);
@@ -174,214 +195,97 @@ function Home({ route }) {
   const lockedCardHeight = Math.min(height * 0.11, 100);
   const lockedCardMarginBottom = Math.max(height * 0.025, 18);
 
-  useFocusEffect(
-    useCallback(() => {
-      const processResultado = async () => {
-        const resultado = route?.params?.resultadoAtividade;
-        if (!resultado || !currentUser?.id || !storageReady) return;
-
-        console.log('[HOME] resultadoAtividade recebido:', resultado);
-
-        const userId = currentUser.id;
-        const resultadoId = getResultadoId(resultado);
-
-        if (resultado.xpGanho) {
-          xpGlobal += resultado.xpGanho;
-          setXpPoints(xpGlobal);
-        }
-
-        let novaVida = getLifeGlobal();
-
-        if (typeof resultado.vidasRestantes === 'number') {
-          novaVida = Math.max(0, resultado.vidasRestantes);
-        }
-
-        if (resultado.bonusVida) {
-          if (!atividadesComBonus.has(resultadoId)) {
-            atividadesComBonus.add(resultadoId);
-            novaVida += 1;
-            setBonusModalVisible(true);
-
-            try {
-              await AsyncStorage.setItem(
-                getBonusStorageKey(userId),
-                JSON.stringify([...atividadesComBonus])
-              );
-            } catch (error) {
-              console.log('[HOME] erro ao salvar bônus local:', error);
-            }
-          } else {
-            console.log('[HOME] bônus já concedido anteriormente para:', resultadoId);
-          }
-        }
-
-        setLifeGlobal(novaVida);
-        setLife(novaVida);
-
-        const deveSubirNivel =
-          resultado?.concluida === true || resultado?.aprovado === true;
-
-        let nextNivel = nivelGlobal ?? nivel;
-
-        if (deveSubirNivel) {
-          if (!atividadesConcluidas.has(resultadoId)) {
-            atividadesConcluidas.add(resultadoId);
-
-            nextNivel = (nivelGlobal ?? nivel) + 1;
-            nivelGlobal = nextNivel;
-            setNivel(nextNivel);
-
-            try {
-              await AsyncStorage.setItem(
-                getCompletedStorageKey(userId),
-                JSON.stringify([...atividadesConcluidas])
-              );
-            } catch (error) {
-              console.log('[HOME] erro ao salvar conclusão local:', error);
-            }
-
-            console.log('[HOME] nível subiu para:', nextNivel, 'via', resultadoId);
-          } else {
-            console.log('[HOME] ignorado (já concluída anteriormente):', resultadoId);
-          }
-        } else {
-          console.log('[HOME] não subiu nível (concluida/aprovado false):', resultadoId);
-        }
-
-        updateGameStats({
-          nivel: String(nivelGlobal ?? nextNivel),
-          xpPoints: Number(xpGlobal || 0),
-          lifePoints: Number(novaVida || 0),
-          batutaPoints: Number(batutaGlobal || 0),
-        });
-
-        navigation.setParams({ resultadoAtividade: undefined });
-      };
-
-      processResultado();
-    }, [
-      route?.params?.resultadoAtividade,
-      navigation,
-      updateGameStats,
-      nivel,
-      currentUser?.id,
-      storageReady,
-    ])
-  );
-
-  useEffect(() => {
-    const persistBatuta = async () => {
-      if (!currentUser?.id || !storageReady) return;
-
-      let changed = false;
-
-      if (licao1Concluida && !licoesComBatuta.has('lesson-1')) {
-        licoesComBatuta.add('lesson-1');
-        batutaGlobal += 1;
-        setBatutaPoints(batutaGlobal);
-        changed = true;
-      }
-
-      if (licao2Concluida && !licoesComBatuta.has('lesson-2')) {
-        licoesComBatuta.add('lesson-2');
-        batutaGlobal += 1;
-        setBatutaPoints(batutaGlobal);
-        changed = true;
-      }
-
-      if (changed) {
-        try {
-          await AsyncStorage.setItem(
-            getBatutaStorageKey(currentUser.id),
-            JSON.stringify([...licoesComBatuta])
-          );
-        } catch (error) {
-          console.log('[HOME] erro ao salvar recompensas de lição:', error);
-        }
-
-        updateGameStats({
-          batutaPoints: Number(batutaGlobal || 0),
-        });
-      }
-    };
-
-    persistBatuta();
-  }, [licao1Concluida, licao2Concluida, updateGameStats, currentUser?.id, storageReady]);
-
-  const getLessonIcon = (lessonNumber) => {
+  const getLessonIcon = (lessonNumber, blocked = false) => {
     if (lessonNumber === '1') return Licao01;
-    if (lessonNumber === '2') return Licao02;
-    return null;
+
+    if (lessonNumber === '2') {
+      return blocked ? Licao02Inactive : Licao02;
+    }
+
+    return blocked ? Licao02Inactive : Licao02;
   };
 
   const isItemActive = (lesson, index) => {
     const lessonNumber = Number(lesson.lesson);
 
-    if (lessonNumber === 1) {
-      const allowed = Math.min(nivel, lesson.items.length);
-      return index < allowed;
-    }
+    if (isLessonBlocked(lessonNumber)) return false;
 
-    if (lessonNumber === 2) {
-      if (licao2Bloqueada) return false;
+    const previousLessonsTotal = getLessonTotalItemsBefore(lessonNumber);
+    const progressInLesson = Math.max(0, progressLevel - previousLessonsTotal);
+    const allowed = Math.min(progressInLesson, lesson.items.length);
 
-      const offset = totalItensLicao1;
-      const nivelNaLicao2 = Math.max(0, nivel - offset);
-      const allowed = Math.min(nivelNaLicao2, lesson.items.length);
-      return index < allowed;
-    }
-
-    return true;
+    return index < allowed;
   };
+
+  const handleOpenLockedLesson = (lessonNumber) => {
+    setLockedLessonInfo({
+      visible: true,
+      lessonNumber,
+    });
+  };
+
+  const handleCloseLockedLesson = () => {
+    setLockedLessonInfo({
+      visible: false,
+      lessonNumber: null,
+    });
+  };
+
+  const renderLockedLesson = (lesson) => (
+    <FeedContainer style={{ alignItems: 'center', marginTop: 4 }}>
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={() => handleOpenLockedLesson(lesson.lesson)}
+      >
+        <View style={{ alignItems: 'center', opacity: 0.5 }}>
+          <LessonContainer>
+            <IconLesson
+              source={getLessonIcon(lesson.lesson, true)}
+              resizeMode="contain"
+              style={{
+                width: lockedLessonIconWidth,
+                height: lockedLessonIconHeight,
+                marginBottom: 8,
+              }}
+            />
+          </LessonContainer>
+
+          <View
+            style={{
+              width: lockedCardWidth,
+              height: lockedCardHeight,
+              backgroundColor: '#fff',
+              borderRadius: 16,
+              marginBottom: lockedCardMarginBottom,
+            }}
+          />
+        </View>
+      </TouchableOpacity>
+    </FeedContainer>
+  );
 
   const renderLessonBlock = ({ item: lesson }) => {
     const itens = lesson.items;
+    const lessonBlocked = isLessonBlocked(lesson.lesson);
 
-    if (lesson.lesson === '2' && licao2Bloqueada) {
-      return (
-        <FeedContainer style={{ alignItems: 'center', marginTop: 4 }}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => setLockedLessonVisible(true)}
-          >
-            <View style={{ alignItems: 'center', opacity: 0.5 }}>
-              <LessonContainer>
-                <IconLesson
-                  source={Licao02Inactive}
-                  resizeMode="contain"
-                  style={{
-                    width: lockedLessonIconWidth,
-                    height: lockedLessonIconHeight,
-                    marginBottom: 8,
-                  }}
-                />
-              </LessonContainer>
-
-              <View
-                style={{
-                  width: lockedCardWidth,
-                  height: lockedCardHeight,
-                  backgroundColor: '#fff',
-                  borderRadius: 16,
-                  marginBottom: lockedCardMarginBottom,
-                }}
-              />
-            </View>
-          </TouchableOpacity>
-        </FeedContainer>
-      );
+    if (lessonBlocked) {
+      return renderLockedLesson(lesson);
     }
 
     return (
       <FeedContainer
-        style={licao2Bloqueada ? { marginTop: Math.max(height * 0.02, 20) } : undefined}
+        style={
+          isOnlyLesson2Blocked
+            ? { marginTop: Math.max(height * 0.02, 20) }
+            : undefined
+        }
       >
         <LessonContainer>
           <IconLesson
             resizeMode="contain"
             source={getLessonIcon(lesson.lesson)}
             style={
-              licao2Bloqueada && lesson.lesson === '1'
+              isOnlyLesson2Blocked && lesson.lesson === '1'
                 ? {
                     width: compactLesson1IconWidth,
                     height: compactLesson1IconHeight,
@@ -396,7 +300,7 @@ function Home({ route }) {
           resizeMode="contain"
           source={Bg}
           style={
-            licao2Bloqueada && lesson.lesson === '1'
+            isOnlyLesson2Blocked && lesson.lesson === '1'
               ? {
                   height: compactLesson1BoardHeight,
                   marginBottom: 8,
@@ -420,30 +324,74 @@ function Home({ route }) {
     );
   };
 
+  const handleCloseBonusModal = () => {
+    setBonusModalVisible(false);
+    setBonusReward({
+      bonusVidaGanha: false,
+      bonusXpGanho: false,
+    });
+
+    if (eloReward?.eloAnterior && eloReward?.eloAtual) {
+      setEloModalVisible(true);
+    }
+  };
+
+  const handleCloseEloModal = () => {
+    setEloModalVisible(false);
+    setEloReward({
+      eloAnterior: null,
+      eloAtual: null,
+    });
+  };
+
+  const lockedLessonNumber = Number(lockedLessonInfo.lessonNumber);
+  const previousLessonNumber = lockedLessonNumber > 1 ? lockedLessonNumber - 1 : null;
+
+  const lockedLessonMessage = previousLessonNumber
+    ? `Complete a Lição ${String(previousLessonNumber).padStart(
+        2,
+        '0',
+      )} para \n desbloquear esta lição.`
+    : 'Complete a lição anterior para desbloquear esta lição.';
+
   return (
     <HomeContainer>
-      <Header xpPoints={xpPoints} batutaPoints={batutaPoints} lifePoints={life} />
+      <Header
+        xpPoints={xpPoints}
+        batutaPoints={batutaPoints}
+        lifePoints={life}
+      />
 
       <FlatList
         data={staticFeeds.feeds}
         keyExtractor={(lesson) => lesson.lesson}
         renderItem={renderLessonBlock}
         showsVerticalScrollIndicator={false}
-        scrollEnabled={licao2Bloqueada ? false : true}
+        scrollEnabled={!isOnlyLesson2Blocked}
         contentContainerStyle={{
-          paddingBottom: licao2Bloqueada ? 20 : 40,
+          paddingBottom: isOnlyLesson2Blocked ? 20 : 40,
         }}
       />
 
       <LockedModal
-        visible={lockedLessonVisible}
-        onClose={() => setLockedLessonVisible(false)}
-        message="Complete a Lição 01 para desbloquear esta lição."
+        visible={lockedLessonInfo.visible}
+        onClose={handleCloseLockedLesson}
+        title="Lição bloqueada"
+        message={lockedLessonMessage}
       />
 
       <BonusLifeModal
         visible={bonusModalVisible}
-        onClose={() => setBonusModalVisible(false)}
+        onClose={handleCloseBonusModal}
+        bonusVidaGanha={bonusReward.bonusVidaGanha}
+        bonusXpGanho={bonusReward.bonusXpGanho}
+      />
+
+      <EloUpModal
+        visible={eloModalVisible}
+        onClose={handleCloseEloModal}
+        eloAnterior={eloReward.eloAnterior}
+        eloAtual={eloReward.eloAtual}
       />
     </HomeContainer>
   );
