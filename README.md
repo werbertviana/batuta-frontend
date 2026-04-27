@@ -1,6 +1,7 @@
 # Batuta Frontend 🎵
 ![React Native](https://img.shields.io/badge/React%20Native-Mobile-blue)
 ![Status](https://img.shields.io/badge/status-em%20desenvolvimento-yellow)
+![License](https://img.shields.io/badge/license-Proprietary-red)
 >  Aplicativo mobile gamificado para ensino de teoria musical desenvolvido com **React Native**.
 * Batuta é um aplicativo mobile criado para tornar o aprendizado de teoria musical mais acessível, interativo e motivador, utilizando conceitos de gamificação para engajar estudantes de música.
 * A aplicação utiliza exercícios em formato de quiz interativo, incentivando o usuário a aprender conceitos musicais de forma progressiva e divertida, semelhante a plataformas modernas de aprendizado gamificado.
