@@ -1,10 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { SafeAreaView, TouchableOpacity, FlatList, Dimensions } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  SafeAreaView,
+  TouchableOpacity,
+  FlatList,
+  Dimensions,
+} from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import AppIntroSlider from 'react-native-app-intro-slider';
 import FastImage from 'react-native-fast-image';
-import IntroHeader from './IntroHeader';
 import Sound from 'react-native-sound';
+
+import IntroHeader from './IntroHeader';
+import BatutaLoader from '../../../../components/loader/BatutaLoader';
 
 import {
   Container,
@@ -13,10 +20,10 @@ import {
   DivisorLine,
   SlideView,
   SlideView2,
-  FlatView,
 } from './IntroStyles';
 
-// importando imagens
+import { getModuleByContentKey } from '../../../../services/batutaApi';
+
 import Slide01 from '../../../../assets/images/conteudo/licao01/introducao/slide01.png';
 import Slide02 from '../../../../assets/images/conteudo/licao01/introducao/slide02.png';
 import Slide03 from '../../../../assets/images/conteudo/licao01/introducao/slide03.png';
@@ -24,13 +31,8 @@ import Slide04 from '../../../../assets/images/conteudo/licao01/introducao/slide
 import Slide05 from '../../../../assets/images/conteudo/licao01/introducao/slide05.png';
 import Slide06 from '../../../../assets/images/conteudo/licao01/introducao/slide06.png';
 
-// importando ícones
 import Som from '../../../../assets/icons/sound.png';
 
-// import slides estáticos
-import staticSlides from '../../../../data/licao01/intro.json';
-
-// import botões do conteúdo
 import {
   ConteudoNextButton,
   ConteudoDoneButton,
@@ -38,104 +40,89 @@ import {
   ConteudoSkipButton,
 } from '../../../../components/buttons/conteudo/ConteudoButtons';
 
+const slideImageMap = {
+  'slide01.png': Slide01,
+  'slide04.png': Slide04,
+  'slide05.png': Slide05,
+  'slide06.png': Slide06,
+};
+
+const audioMap = {
+  melodia: require('../../../../assets/sounds/licao01/introducao/melodia.mp3'),
+  harmonia: require('../../../../assets/sounds/licao01/introducao/harmonia.mp3'),
+  ritmo: require('../../../../assets/sounds/licao01/introducao/ritmo.mp3'),
+};
 
 function Introducao() {
-  const allSlides = staticSlides.slides;
-  const [musica, setMusica] = useState(null);
   const navigation = useNavigation();
+  const route = useRoute();
+
   const { width, height } = Dimensions.get('window');
+
+  const [slides, setSlides] = useState([]);
+  const [musica, setMusica] = useState(null);
+  const [isLoadingSlides, setIsLoadingSlides] = useState(true);
 
   const normalImageStyle = {
     width: width * 0.95,
-    height: height * 0.55
+    height: height * 0.55,
   };
 
   const audioImageStyle = {
     width: width * 0.95,
-    height: height * 0.50
+    height: height * 0.5,
   };
 
-  const playSound = (music) => {
-    Sound.setCategory('Playback');
-    let sound = null;
+  useEffect(() => {
+    let isMounted = true;
 
-    if (music === 'melodia') {
-      sound = new Sound(
-        require('../../../../assets/sounds/licao01/introducao/melodia.mp3'),
-        (error) => {
-          if (error) {
-            console.log('Erro ao carregar a melodia:', error);
-            return;
-          }
+    const loadSlides = async () => {
+      try {
+        setIsLoadingSlides(true);
 
-          sound.play((success) => {
-            if (success) {
-              console.log('Melodia terminou de tocar');
-            } else {
-              console.log('Erro ao reproduzir a melodia');
-            }
-            setMusica(null);
-          });
+        const contentKey = route?.params?.content ?? '1';
+        const module = await getModuleByContentKey(contentKey);
+
+        const apiSlides = (module?.slides || [])
+          .map((slide) => ({
+            key: String(slide.id),
+            image: slide.image,
+            audios: slide.audios || [],
+            order: slide.order,
+          }))
+          .sort((a, b) => a.order - b.order);
+
+        if (isMounted) {
+          setSlides(apiSlides);
         }
-      );
-    }
+      } catch (error) {
+        console.log('[INTRODUCAO] Erro ao carregar slides da API:', error);
 
-    if (music === 'harmonia') {
-      sound = new Sound(
-        require('../../../../assets/sounds/licao01/introducao/harmonia.mp3'),
-        (error) => {
-          if (error) {
-            console.log('Erro ao carregar a harmonia:', error);
-            return;
-          }
-
-          sound.play((success) => {
-            if (success) {
-              console.log('Harmonia terminou de tocar');
-            } else {
-              console.log('Erro ao reproduzir a harmonia');
-            }
-            setMusica(null);
-          });
+        if (isMounted) {
+          setSlides([]);
         }
-      );
-    }
-
-    if (music === 'ritmo') {
-      sound = new Sound(
-        require('../../../../assets/sounds/licao01/introducao/ritmo.mp3'),
-        (error) => {
-          if (error) {
-            console.log('Erro ao carregar o ritmo:', error);
-            return;
-          }
-
-          sound.play((success) => {
-            if (success) {
-              console.log('Ritmo terminou de tocar');
-            } else {
-              console.log('Erro ao reproduzir o ritmo');
-            }
-            setMusica(null);
-          });
+      } finally {
+        if (isMounted) {
+          setIsLoadingSlides(false);
         }
-      );
-    }
+      }
+    };
 
-    setMusica(sound);
-  };
+    loadSlides();
 
-  const selected = (music) => {
+    return () => {
+      isMounted = false;
+    };
+  }, [route?.params?.content]);
+
+  const stopSound = useCallback(() => {
     if (musica) {
       musica.stop(() => {
         musica.release();
         setMusica(null);
       });
-      return;
     }
-
-    playSound(music);
-  };
+  }, [musica]);
 
   useEffect(() => {
     return () => {
@@ -147,6 +134,37 @@ function Introducao() {
     };
   }, [musica]);
 
+  const playSound = (audioName) => {
+    const audioSource = audioMap[audioName];
+
+    if (!audioSource) return;
+
+    Sound.setCategory('Playback');
+
+    const sound = new Sound(audioSource, (error) => {
+      if (error) {
+        console.log(`[INTRODUCAO] Erro ao carregar áudio ${audioName}:`, error);
+        return;
+      }
+
+      sound.play(() => {
+        sound.release();
+        setMusica(null);
+      });
+    });
+
+    setMusica(sound);
+  };
+
+  const selected = (audioName) => {
+    if (musica) {
+      stopSound();
+      return;
+    }
+
+    playSound(audioName);
+  };
+
   const Done = () => {
     navigation.navigate('AtivIntro');
   };
@@ -155,11 +173,7 @@ function Introducao() {
     <Container>
       <IntroHeader />
       <SlideView>
-        <FastImage
-          resizeMode="contain"
-          source={source}
-          style={normalImageStyle}
-        />
+        <FastImage resizeMode="contain" source={source} style={normalImageStyle} />
       </SlideView>
     </Container>
   );
@@ -167,77 +181,87 @@ function Introducao() {
   const renderAudioSlide = (source, soundName) => (
     <Container>
       <IntroHeader />
+
       <SlideView2>
-        <FastImage
-          resizeMode="contain"
-          source={source}
-          style={audioImageStyle}
-        />
+        <FastImage resizeMode="contain" source={source} style={audioImageStyle} />
       </SlideView2>
+
       <Div>
         <DivisorLine />
+
         <TouchableOpacity onPress={() => selected(soundName)}>
           <SafeAreaView>
             <ImageSound source={Som} />
           </SafeAreaView>
         </TouchableOpacity>
+
         <DivisorLine />
       </Div>
     </Container>
   );
 
-  const renderFlatIntro = (item) => {
-    if (item === 'slide02_03.png') {
+  const renderFlatIntro = ({ item }) => {
+    if (item === 'slide02.png') {
       return (
-        <FlatView>
-          <FastImage
-            resizeMode="contain"
-            source={Slide02}
-            style={normalImageStyle}
-          />
-          <FastImage
-            resizeMode="contain"
-            source={Slide03}
-            style={normalImageStyle}
-          />
-        </FlatView>
+        <FastImage resizeMode="contain" source={Slide02} style={normalImageStyle} />
+      );
+    }
+
+    if (item === 'slide03.png') {
+      return (
+        <FastImage resizeMode="contain" source={Slide03} style={normalImageStyle} />
       );
     }
 
     return null;
   };
 
-  const slideComponents = {
-    'slide01.png': renderNormalSlide(Slide01),
+  const renderGroupedSlide = () => (
+    <Container>
+      <IntroHeader />
 
-    'slide02_03.png': (
-      <Container>
-        <IntroHeader />
-        <SlideView>
-          <FlatList
-            data={allSlides}
-            keyExtractor={(items) => items.key}
-            renderItem={(items) => renderFlatIntro(items.item.image)}
-            showsVerticalScrollIndicator={false}
-            showsHorizontalScrollIndicator={false}
-          />
-        </SlideView>
-      </Container>
-    ),
-
-    'slide04.png': renderAudioSlide(Slide04, 'melodia'),
-    'slide05.png': renderAudioSlide(Slide05, 'harmonia'),
-    'slide06.png': renderAudioSlide(Slide06, 'ritmo'),
-  };
+      <SlideView>
+        <FlatList
+          data={['slide02.png', 'slide03.png']}
+          keyExtractor={(item) => item}
+          renderItem={renderFlatIntro}
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
+        />
+      </SlideView>
+    </Container>
+  );
 
   const renderSlides = ({ item }) => {
-    return slideComponents[item.image] || null;
+    if (item.image === 'slide02_03.png') {
+      return renderGroupedSlide();
+    }
+
+    const source = slideImageMap[item.image];
+
+    if (!source) return null;
+
+    const audioName = item.audios?.[0]?.audioName;
+
+    if (audioName) {
+      return renderAudioSlide(source, audioName);
+    }
+
+    return renderNormalSlide(source);
   };
+
+  if (isLoadingSlides) {
+    return <BatutaLoader text="Carregando conteúdo..." />;
+  }
+
+  if (slides.length === 0) {
+    return <BatutaLoader text="Preparando conteúdo..." />;
+  }
 
   return (
     <AppIntroSlider
       renderItem={renderSlides}
-      data={allSlides}
+      data={slides}
       style={{ backgroundColor: '#FFF' }}
       activeDotStyle={{
         marginTop: '6%',
@@ -247,9 +271,9 @@ function Introducao() {
         marginTop: '6%',
         backgroundColor: '#D2D3D5',
       }}
-      showSkipButton={true}
-      showPrevButton={true}
-      bottomButton={true}
+      showSkipButton
+      showPrevButton
+      bottomButton
       renderNextButton={ConteudoNextButton}
       renderSkipButton={ConteudoSkipButton}
       renderDoneButton={ConteudoDoneButton}

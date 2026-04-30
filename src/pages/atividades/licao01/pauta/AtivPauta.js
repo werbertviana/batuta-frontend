@@ -1,12 +1,15 @@
 // src/pages/atividades/licao01/pauta/AtivPauta.js
 
 import React, { useState, useRef, useEffect } from 'react';
-import { View, FlatList, Alert } from 'react-native';
+import { View, FlatList } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../../../contexts/AuthContext';
 
 import AtivHeader from '../../../../components/ativHeader/AtivHeader';
+import BatutaLoader from '../../../../components/loader/BatutaLoader';
+import useActivitySession from '../../../../hooks/useActivitySession';
+import useActivityFlow from '../../../../hooks/useActivityFlow';
 
 import {
   AtivContainer,
@@ -27,8 +30,6 @@ import {
 import SkipButton from '../../../../components/buttons/atividades/skipButton/SkipButton';
 import NextButton from '../../../../components/buttons/atividades/nextButton/NextButton';
 
-import staticAtividades from '../../../../data/atividades/licao01/pauta/ativPauta.json';
-
 import Q01 from '../../../../assets/images/atividades/licao01/pauta/Q01.png';
 import Q02 from '../../../../assets/images/atividades/licao01/pauta/Q02.png';
 import Q03 from '../../../../assets/images/atividades/licao01/pauta/Q03.png';
@@ -39,7 +40,6 @@ import ResumoAtividadeModal from '../../../../components/modal/ResumoAtividadeMo
 import LifeLostModal from '../../../../components/modal/LifeLostModal';
 import SkipInfoModal from '../../../../components/modal/SkipInfoModal';
 import AppToast from '../../../../components/toast/AppToast';
-
 import NivelIndicator from '../../../../components/nivel/NivelIndicator';
 
 const MAX_SKIPS_PER_ACTIVITY = 2;
@@ -47,7 +47,6 @@ const OLD_HIDE_SKIP_INFO_KEY = '@batuta:hide_skip_info_modal';
 
 const getHideSkipInfoKey = (user) => {
   const identifier = user?.email || user?.id;
-
   if (!identifier) return null;
 
   return `@batuta:hide_skip_info_modal:user:${String(identifier).toLowerCase()}`;
@@ -68,39 +67,56 @@ function AtivPauta() {
   const toastTimeoutRef = useRef(null);
   const skipInfoShownRef = useRef(false);
 
-  const allAtividades = staticAtividades.atividades;
+  const session = useActivitySession('ativ-pauta');
 
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [respostaSelecionada, setRespostaSelecionada] = useState(null);
+  const {
+    allAtividades,
+    questaoAtual,
+    currentIndex,
+    isLoadingActivity,
+    restartActivity,
+    resetSession,
+  } = session;
 
-  const [feedbackVisible, setFeedbackVisible] = useState(false);
-  const [feedbackInfo, setFeedbackInfo] = useState({
-    isCorrect: false,
-    correctAlternative: '',
+  const flow = useActivityFlow({
+    activityName: 'Pauta Musical',
+    session,
+    user,
+    headerRef,
+    navigation,
+    updateGameStats,
+    previewActivity,
+    completeActivity,
+    isSyncing,
+    maxSkips: MAX_SKIPS_PER_ACTIVITY,
   });
 
-  const [resumoVisible, setResumoVisible] = useState(false);
-  const [resumoDados, setResumoDados] = useState(null);
+  const {
+    respostaSelecionada,
+    setRespostaSelecionada,
+    feedbackVisible,
+    feedbackInfo,
+    resumoVisible,
+    resumoDados,
+    lifeModalVisible,
+    puladasCount,
+    isSavingLife,
+    isPreviewingActivity,
+    isFinishingActivity,
+    confirmarResposta,
+    fecharFeedback,
+    skip,
+    resetarFlow,
+    finalizarAtividade,
+    setLifeModalVisible,
+  } = flow;
 
-  const [lifeModalVisible, setLifeModalVisible] = useState(false);
   const [skipInfoVisible, setSkipInfoVisible] = useState(false);
   const [hideSkipInfo, setHideSkipInfo] = useState(false);
 
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('warning');
-
-  const [isSavingLife, setIsSavingLife] = useState(false);
-  const [isPreviewingActivity, setIsPreviewingActivity] = useState(false);
-  const [isFinishingActivity, setIsFinishingActivity] = useState(false);
-
-  const [puladasCount, setPuladasCount] = useState(0);
-
-  const acertosRef = useRef(0);
-  const errosRef = useRef(0);
-  const puladasRef = useRef(0);
-
-  const questaoAtual = allAtividades[currentIndex];
 
   useEffect(() => {
     const loadSkipInfoPreference = async () => {
@@ -182,206 +198,16 @@ function AtivPauta() {
 
   const handleSelectAlternative = (alternativa) => {
     if (isSavingLife || isPreviewingActivity || isFinishingActivity) return;
+
     setRespostaSelecionada(alternativa);
   };
 
-  const getCurrentLives = () => {
-    let vidasRestantes = Number(user?.gameStats?.lifePoints ?? 3);
-
-    if (headerRef.current?.getLives) {
-      const v = headerRef.current.getLives();
-      if (!isNaN(v)) vidasRestantes = v;
-    }
-
-    return vidasRestantes;
-  };
-
-  const calcularResumoLocal = () => {
-    const totalQuestoes = allAtividades.length;
-    const acertos = acertosRef.current;
-    const erros = errosRef.current;
-    const puladas = puladasRef.current;
-    const percentualAcerto = (acertos / totalQuestoes) * 100;
-    const aprovado = percentualAcerto >= 50;
-
-    return {
-      atividade: 'Pauta Musical',
-      totalQuestoes,
-      acertos,
-      erros,
-      puladas,
-      maxPuladas: MAX_SKIPS_PER_ACTIVITY,
-      percentualAcerto,
-      aprovado,
-      vidasRestantes: getCurrentLives(),
-    };
-  };
-
-  const mostrarResumoFinal = async () => {
-    if (isPreviewingActivity || isFinishingActivity) return;
-
-    const resumoLocal = calcularResumoLocal();
-
-    try {
-      setIsPreviewingActivity(true);
-
-      const preview = await previewActivity({
-        atividade: resumoLocal.atividade,
-        acertos: resumoLocal.acertos,
-        erros: resumoLocal.erros,
-        puladas: resumoLocal.puladas,
-        totalQuestoes: resumoLocal.totalQuestoes,
-      });
-
-      if (!preview?.ok) {
-        Alert.alert('Erro', 'Não foi possível calcular a prévia da atividade.');
-        return;
-      }
-
-      const reward = preview.reward ?? {};
-
-      setResumoDados({
-        ...resumoLocal,
-        xpBaseGanho: reward.xpBaseGanho ?? 0,
-        xpBonusGanho: reward.xpBonusGanho ?? 0,
-        xpGanho: reward.xpGanho ?? 0,
-        bonusVida: reward.bonusVidaGanha ?? false,
-        bonusXpGanho: reward.bonusXpGanho ?? false,
-        batutasGanhas: reward.batutasGanhas ?? 0,
-        subiuElo: reward.subiuElo ?? false,
-        eloAnterior: reward.eloAnterior ?? null,
-        eloAtual: reward.eloAtual ?? null,
-        primeiraConclusao: reward.primeiraConclusao ?? false,
-        lessonCompleted: reward.lessonCompleted ?? false,
-        lessonRewardGranted: reward.lessonRewardGranted ?? false,
-        progressLevelAnterior: reward.progressLevelAnterior ?? null,
-        progressLevelAtual: reward.progressLevelAtual ?? null,
-        subiuProgressLevel: reward.subiuProgressLevel ?? false,
-        reward,
-      });
-
-      setResumoVisible(true);
-    } finally {
-      setIsPreviewingActivity(false);
-    }
-  };
-
-  const finalizarAtividade = async () => {
-    if (!resumoDados || isFinishingActivity) return;
-
-    try {
-      setIsFinishingActivity(true);
-
-      const result = await completeActivity({
-        atividade: resumoDados.atividade,
-        acertos: resumoDados.acertos,
-        erros: resumoDados.erros,
-        puladas: resumoDados.puladas,
-        totalQuestoes: resumoDados.totalQuestoes,
-      });
-
-      if (!result?.ok) {
-        Alert.alert(
-          'Erro',
-          'Não foi possível sincronizar a atividade com o servidor.',
-        );
-        return;
-      }
-
-      navigation.navigate('Tab', {
-        screen: 'Home',
-        params: {
-          resultadoAtividade: {
-            user: result.user ?? null,
-            reward: result.reward ?? null,
-          },
-        },
-      });
-    } finally {
-      setIsFinishingActivity(false);
-    }
-  };
-
-  const persistirPerdaDeVida = async () => {
-    if (isSavingLife) return false;
-
-    const vidasAntes = getCurrentLives();
-    const vidasDepois = Math.max(0, vidasAntes - 1);
-
-    if (headerRef.current?.loseLife) {
-      headerRef.current.loseLife();
-    }
-
-    try {
-      setIsSavingLife(true);
-
-      const result = await updateGameStats({
-        lifePoints: vidasDepois,
-      });
-
-      if (!result?.ok) {
-        Alert.alert('Erro', 'Não foi possível salvar a perda de vida.');
-        return false;
-      }
-
-      if (vidasDepois === 0) {
-        setFeedbackVisible(false);
-        setLifeModalVisible(true);
-        return true;
-      }
-
-      return false;
-    } finally {
-      setIsSavingLife(false);
-    }
-  };
-
-  const irParaProximaOuResumo = () => {
-    const next = currentIndex + 1 < allAtividades.length;
-
-    if (next) {
-      setCurrentIndex((prev) => prev + 1);
-      setRespostaSelecionada(null);
-    } else {
-      mostrarResumoFinal();
-    }
-  };
-
   const handleConfirm = async () => {
-    if (isSavingLife || isPreviewingActivity || isFinishingActivity || isSyncing) {
-      return;
-    }
+    const result = await confirmarResposta();
 
-    if (!respostaSelecionada) {
+    if (result?.error === 'no_selection') {
       showToast('Selecione uma alternativa', 'warning');
-      return;
     }
-
-    const alternativaCorreta = questaoAtual.alternativa_correta;
-    const isCorrect = respostaSelecionada === alternativaCorreta;
-
-    if (isCorrect) {
-      acertosRef.current += 1;
-    } else {
-      errosRef.current += 1;
-
-      const gameOver = await persistirPerdaDeVida();
-      if (gameOver) return;
-    }
-
-    setFeedbackInfo({
-      isCorrect,
-      correctAlternative: alternativaCorreta,
-    });
-
-    setFeedbackVisible(true);
-  };
-
-  const handleCloseFeedback = () => {
-    if (isSavingLife || isPreviewingActivity || isFinishingActivity) return;
-
-    setFeedbackVisible(false);
-    irParaProximaOuResumo();
   };
 
   const handleSkipLimit = () => {
@@ -389,24 +215,68 @@ function AtivPauta() {
   };
 
   const handleSkip = () => {
-    if (isSavingLife || isPreviewingActivity || isFinishingActivity || isSyncing) {
-      return;
-    }
+    const result = skip();
 
-    if (puladasRef.current >= MAX_SKIPS_PER_ACTIVITY) {
+    if (result?.limit) {
       handleSkipLimit();
       return;
     }
 
-    puladasRef.current += 1;
-    setPuladasCount(puladasRef.current);
-
-    if (!skipInfoShownRef.current && !hideSkipInfo) {
+    if (result?.ok && !skipInfoShownRef.current && !hideSkipInfo) {
       skipInfoShownRef.current = true;
       setSkipInfoVisible(true);
     }
+  };
 
-    irParaProximaOuResumo();
+  const resetarAtividade = () => {
+    skipInfoShownRef.current = false;
+
+    resetarFlow();
+    resetSession();
+  };
+
+  const handleRecomecar = async () => {
+    resetarAtividade();
+    await restartActivity();
+  };
+
+  const handleLifeModalConfirm = () => {
+    setLifeModalVisible(false);
+    resetarAtividade();
+  };
+
+  const handleLifeModalExit = () => {
+    setLifeModalVisible(false);
+
+    navigation.navigate('Tab', {
+      screen: 'Home',
+      params: {
+        resultadoAtividade: {
+          reward: {
+            aprovado: false,
+            xpGanho: 0,
+            bonusVidaGanha: false,
+            bonusXpGanho: false,
+          },
+        },
+      },
+    });
+  };
+
+  const handleCloseActivity = () => {
+    navigation.navigate('Tab', {
+      screen: 'Home',
+      params: {
+        resultadoAtividade: {
+          reward: {
+            aprovado: false,
+            xpGanho: 0,
+            bonusVidaGanha: false,
+            bonusXpGanho: false,
+          },
+        },
+      },
+    });
   };
 
   const renderAlternativaFigura = (alternativa, imagem) => {
@@ -471,66 +341,13 @@ function AtivPauta() {
     </View>
   );
 
-  const resetarAtividade = () => {
-    acertosRef.current = 0;
-    errosRef.current = 0;
-    puladasRef.current = 0;
-    skipInfoShownRef.current = false;
+  if (isLoadingActivity) {
+    return <BatutaLoader text="Afinando a atividade..." />;
+  }
 
-    setPuladasCount(0);
-    setResumoVisible(false);
-    setResumoDados(null);
-    setFeedbackVisible(false);
-    setRespostaSelecionada(null);
-    setCurrentIndex(0);
-  };
-
-  const handleRecomecar = () => {
-    resetarAtividade();
-  };
-
-  const handleContinuarResumo = async () => {
-    await finalizarAtividade();
-  };
-
-  const handleLifeModalConfirm = () => {
-    setLifeModalVisible(false);
-    resetarAtividade();
-  };
-
-  const handleLifeModalExit = () => {
-    setLifeModalVisible(false);
-
-    navigation.navigate('Tab', {
-      screen: 'Home',
-      params: {
-        resultadoAtividade: {
-          reward: {
-            aprovado: false,
-            xpGanho: 0,
-            bonusVidaGanha: false,
-            bonusXpGanho: false,
-          },
-        },
-      },
-    });
-  };
-
-  const handleCloseActivity = () => {
-    navigation.navigate('Tab', {
-      screen: 'Home',
-      params: {
-        resultadoAtividade: {
-          reward: {
-            aprovado: false,
-            xpGanho: 0,
-            bonusVidaGanha: false,
-            bonusXpGanho: false,
-          },
-        },
-      },
-    });
-  };
+  if (!questaoAtual) {
+    return <BatutaLoader text="Preparando atividade..." />;
+  }
 
   const progress = (currentIndex + 1) / allAtividades.length;
 
@@ -588,15 +405,15 @@ function AtivPauta() {
         visible={feedbackVisible}
         isCorrect={feedbackInfo.isCorrect}
         correctAlternative={feedbackInfo.correctAlternative}
-        onClose={handleCloseFeedback}
+        onClose={fecharFeedback}
       />
 
       <ResumoAtividadeModal
         visible={resumoVisible}
         resumoDados={resumoDados}
-        onClose={handleContinuarResumo}
+        onClose={finalizarAtividade}
         onRecomecar={handleRecomecar}
-        onContinuar={handleContinuarResumo}
+        onContinuar={finalizarAtividade}
       />
 
       <LifeLostModal

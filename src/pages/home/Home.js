@@ -1,12 +1,20 @@
 // src/screens/home/Home.js
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { FlatList, View, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  FlatList,
+  View,
+  TouchableOpacity,
+  Dimensions,
+  Animated,
+  Easing,
+} from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 import Header from '../../components/header/Header';
-import staticFeeds from '../../data/feeds/feeds.json';
+import { getLessonsWithModules } from '../../services/batutaApi';
+import BatutaLoader from '../../components/loader/BatutaLoader';
 
 import {
   Background,
@@ -33,10 +41,158 @@ const Bg = require('../../assets/images/home/bg.png');
 
 const { width, height } = Dimensions.get('window');
 
+const unlockGlowSize = Math.min(width * 0.27, 112);
+
+function UnlockAnimatedItem({ active, children, onTouch }) {
+  const glowOpacity = useRef(new Animated.Value(0)).current;
+  const shineTranslateX = useRef(new Animated.Value(-unlockGlowSize)).current;
+  const shineOpacity = useRef(new Animated.Value(0)).current;
+  const loopRef = useRef(null);
+
+  useEffect(() => {
+    if (!active) {
+      if (loopRef.current) {
+        loopRef.current.stop();
+        loopRef.current = null;
+      }
+
+      glowOpacity.setValue(0);
+      shineTranslateX.setValue(-unlockGlowSize);
+      shineOpacity.setValue(0);
+      return;
+    }
+
+    glowOpacity.setValue(0.42);
+    shineTranslateX.setValue(-unlockGlowSize);
+    shineOpacity.setValue(0);
+
+    loopRef.current = Animated.loop(
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(glowOpacity, {
+            toValue: 0.58,
+            duration: 650,
+            easing: Easing.inOut(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(shineOpacity, {
+            toValue: 0.82,
+            duration: 180,
+            useNativeDriver: true,
+          }),
+          Animated.timing(shineTranslateX, {
+            toValue: unlockGlowSize,
+            duration: 1050,
+            easing: Easing.inOut(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ]),
+
+        Animated.parallel([
+          Animated.timing(glowOpacity, {
+            toValue: 0.36,
+            duration: 500,
+            easing: Easing.inOut(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(shineOpacity, {
+            toValue: 0,
+            duration: 260,
+            useNativeDriver: true,
+          }),
+        ]),
+
+        Animated.delay(450),
+
+        Animated.timing(shineTranslateX, {
+          toValue: -unlockGlowSize,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    loopRef.current.start();
+
+    return () => {
+      if (loopRef.current) {
+        loopRef.current.stop();
+        loopRef.current = null;
+      }
+    };
+  }, [active, glowOpacity, shineOpacity, shineTranslateX]);
+
+  return (
+    <View
+      onTouchStart={active ? onTouch : undefined}
+      style={{
+        position: 'relative',
+        overflow: 'visible',
+      }}
+    >
+      {active && (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: 20,
+            left: 0,
+            right: 0,
+            alignItems: 'center',
+            zIndex: 5,
+            elevation: 5,
+          }}
+        >
+          <Animated.View
+            style={{
+              width: unlockGlowSize,
+              height: unlockGlowSize,
+              borderRadius: unlockGlowSize / 2,
+              overflow: 'hidden',
+              backgroundColor: 'rgba(52, 177, 199, 0.10)',
+              borderWidth: 2,
+              borderColor: 'rgba(52, 177, 199, 0.30)',
+              opacity: glowOpacity,
+            }}
+          >
+            <Animated.View
+              style={{
+                position: 'absolute',
+                top: -8,
+                bottom: -8,
+                width: 30,
+                borderRadius: 999,
+                backgroundColor: 'rgba(255, 255, 255, 0.85)',
+                opacity: shineOpacity,
+                transform: [
+                  { translateX: shineTranslateX },
+                  { rotate: '18deg' },
+                ],
+              }}
+            />
+          </Animated.View>
+        </View>
+      )}
+
+      <View style={{ position: 'relative', zIndex: 3 }}>{children}</View>
+    </View>
+  );
+}
+
 function Home({ route }) {
   const navigation = useNavigation();
   const { user } = useAuth();
   const currentUser = user;
+
+  const unlockAnimationTimeoutRef = useRef(null);
+
+  const [feeds, setFeeds] = useState([]);
+  const [isLoadingFeeds, setIsLoadingFeeds] = useState(true);
+  const [recentlyUnlockedKey, setRecentlyUnlockedKey] = useState(null);
+  const [pendingUnlockProgressLevel, setPendingUnlockProgressLevel] =
+    useState(null);
+  const [queuedUnlockProgressLevel, setQueuedUnlockProgressLevel] =
+    useState(null);
 
   const [lockedLessonInfo, setLockedLessonInfo] = useState({
     visible: false,
@@ -61,14 +217,97 @@ function Home({ route }) {
   const [xpPoints, setXpPoints] = useState(0);
 
   useEffect(() => {
+    let isMounted = true;
+
+    const loadFeeds = async () => {
+      try {
+        setIsLoadingFeeds(true);
+
+        const apiFeeds = await getLessonsWithModules();
+
+        if (isMounted) {
+          setFeeds(apiFeeds);
+        }
+      } catch (error) {
+        console.log('[HOME] Erro ao carregar feeds da API:', error);
+
+        if (isMounted) {
+          setFeeds([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingFeeds(false);
+        }
+      }
+    };
+
+    loadFeeds();
+
+    return () => {
+      isMounted = false;
+
+      if (unlockAnimationTimeoutRef.current) {
+        clearTimeout(unlockAnimationTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const getUnlockKeyByProgressLevel = useCallback(
+    (targetProgressLevel) => {
+      let count = 0;
+
+      for (const lesson of feeds) {
+        const items = lesson.items || [];
+
+        for (const item of items) {
+          count += 1;
+
+          if (count === Number(targetProgressLevel)) {
+            return `${lesson.lesson}:${item.id}`;
+          }
+        }
+      }
+
+      return null;
+    },
+    [feeds],
+  );
+
+  const triggerUnlockAnimation = useCallback(
+    (targetProgressLevel) => {
+      const newUnlockKey = getUnlockKeyByProgressLevel(targetProgressLevel);
+
+      if (!newUnlockKey) return;
+
+      requestAnimationFrame(() => {
+        setRecentlyUnlockedKey(newUnlockKey);
+      });
+    },
+    [getUnlockKeyByProgressLevel],
+  );
+
+  useEffect(() => {
+    if (!pendingUnlockProgressLevel || feeds.length === 0) return;
+
+    triggerUnlockAnimation(pendingUnlockProgressLevel);
+    setPendingUnlockProgressLevel(null);
+  }, [pendingUnlockProgressLevel, feeds, triggerUnlockAnimation]);
+
+  useEffect(() => {
     if (!currentUser?.gameStats) return;
 
-    const backendLife = Math.max(0, Number(currentUser.gameStats.lifePoints ?? 3));
+    const backendLife = Math.max(
+      0,
+      Number(currentUser.gameStats.lifePoints ?? 3),
+    );
+
     const backendXp = Math.max(0, Number(currentUser.gameStats.xpPoints ?? 0));
+
     const backendBatutas = Math.max(
       0,
       Number(currentUser.gameStats.batutaPoints ?? 0),
     );
+
     const backendProgressLevel = Math.max(
       1,
       Number(currentUser.gameStats.progressLevel ?? 1),
@@ -89,6 +328,10 @@ function Home({ route }) {
 
         const reward = resultado?.reward ?? resultado;
         const updatedUser = resultado?.user ?? null;
+
+        const hasBonusLife = !!reward?.bonusVidaGanha;
+        const hasBonusXp = !!reward?.bonusXpGanho;
+        const hasEloUp = !!reward?.subiuElo;
 
         if (updatedUser?.gameStats) {
           const backendLife = Math.max(
@@ -127,16 +370,36 @@ function Home({ route }) {
             ),
           );
 
+          const progressLevelAnterior = Number(
+            reward?.progressLevelAnterior ?? progressLevel,
+          );
+
+          const progressLevelAtual = Number(
+            reward?.progressLevelAtual ?? backendProgressLevel,
+          );
+
+          const shouldAnimateUnlock =
+            progressLevelAtual > progressLevelAnterior ||
+            reward?.subiuProgressLevel === true;
+
+          if (shouldAnimateUnlock) {
+            const hasAnyRewardModal = hasBonusLife || hasBonusXp || hasEloUp;
+
+            if (hasAnyRewardModal) {
+              setQueuedUnlockProgressLevel(progressLevelAtual);
+            } else if (feeds.length > 0) {
+              triggerUnlockAnimation(progressLevelAtual);
+            } else {
+              setPendingUnlockProgressLevel(progressLevelAtual);
+            }
+          }
+
           setLifeGlobal(backendLife);
           setLife(backendLife);
           setXpPoints(backendXp);
           setBatutaPoints(backendBatutas);
           setProgressLevel(backendProgressLevel);
         }
-
-        const hasBonusLife = !!reward?.bonusVidaGanha;
-        const hasBonusXp = !!reward?.bonusXpGanho;
-        const hasEloUp = !!reward?.subiuElo;
 
         if (hasEloUp) {
           setEloReward({
@@ -159,18 +422,19 @@ function Home({ route }) {
       };
 
       processResultado();
-    }, [route?.params?.resultadoAtividade, navigation, currentUser?.gameStats]),
+    }, [
+      route?.params?.resultadoAtividade,
+      navigation,
+      currentUser?.gameStats,
+      progressLevel,
+      feeds,
+      triggerUnlockAnimation,
+    ]),
   );
 
   const getLessonTotalItemsBefore = (lessonNumber) => {
-    return staticFeeds.feeds
+    return feeds
       .filter((lesson) => Number(lesson.lesson) < Number(lessonNumber))
-      .reduce((total, lesson) => total + (lesson.items?.length || 0), 0);
-  };
-
-  const getLessonTotalItemsUntil = (lessonNumber) => {
-    return staticFeeds.feeds
-      .filter((lesson) => Number(lesson.lesson) <= Number(lessonNumber))
       .reduce((total, lesson) => total + (lesson.items?.length || 0), 0);
   };
 
@@ -183,7 +447,7 @@ function Home({ route }) {
 
   const isLessonBlocked = (lessonNumber) => !isLessonUnlocked(lessonNumber);
 
-  const isOnlyLesson2Blocked = isLessonBlocked('2');
+  const isOnlyLesson2Blocked = feeds.length === 2 && isLessonBlocked('2');
 
   const compactLesson1IconWidth = Math.min(width * 0.68, 260);
   const compactLesson1IconHeight = Math.min(height * 0.12, 110);
@@ -196,9 +460,9 @@ function Home({ route }) {
   const lockedCardMarginBottom = Math.max(height * 0.025, 18);
 
   const getLessonIcon = (lessonNumber, blocked = false) => {
-    if (lessonNumber === '1') return Licao01;
+    if (String(lessonNumber) === '1') return Licao01;
 
-    if (lessonNumber === '2') {
+    if (String(lessonNumber) === '2') {
       return blocked ? Licao02Inactive : Licao02;
     }
 
@@ -265,7 +529,7 @@ function Home({ route }) {
   );
 
   const renderLessonBlock = ({ item: lesson }) => {
-    const itens = lesson.items;
+    const itens = lesson.items || [];
     const lessonBlocked = isLessonBlocked(lesson.lesson);
 
     if (lessonBlocked) {
@@ -285,7 +549,7 @@ function Home({ route }) {
             resizeMode="contain"
             source={getLessonIcon(lesson.lesson)}
             style={
-              isOnlyLesson2Blocked && lesson.lesson === '1'
+              isOnlyLesson2Blocked && String(lesson.lesson) === '1'
                 ? {
                     width: compactLesson1IconWidth,
                     height: compactLesson1IconHeight,
@@ -300,7 +564,7 @@ function Home({ route }) {
           resizeMode="contain"
           source={Bg}
           style={
-            isOnlyLesson2Blocked && lesson.lesson === '1'
+            isOnlyLesson2Blocked && String(lesson.lesson) === '1'
               ? {
                   height: compactLesson1BoardHeight,
                   marginBottom: 8,
@@ -309,19 +573,46 @@ function Home({ route }) {
           }
         >
           <ItemContainer>
-            {itens.map((item, index) => (
-              <FeedItem
-                key={item.id}
-                title={item.title}
-                icon={item.icon}
-                isActive={isItemActive(lesson, index)}
-                practiceRoute={item.practiceRoute}
-              />
-            ))}
+            {itens.map((item, index) => {
+              const unlockKey = `${lesson.lesson}:${item.id}`;
+              const isRecentlyUnlocked = recentlyUnlockedKey === unlockKey;
+
+              return (
+                <UnlockAnimatedItem
+                  key={item.id}
+                  active={isRecentlyUnlocked}
+                  onTouch={() => {
+                    if (isRecentlyUnlocked) {
+                      setRecentlyUnlockedKey(null);
+                    }
+                  }}
+                >
+                  <FeedItem
+                    title={item.title}
+                    icon={item.icon}
+                    content={item.content}
+                    isActive={isItemActive(lesson, index)}
+                    practiceRoute={item.practiceRoute}
+                  />
+                </UnlockAnimatedItem>
+              );
+            })}
           </ItemContainer>
         </Background>
       </FeedContainer>
     );
+  };
+
+  const playQueuedUnlockAnimation = () => {
+    if (!queuedUnlockProgressLevel) return;
+
+    if (feeds.length > 0) {
+      triggerUnlockAnimation(queuedUnlockProgressLevel);
+    } else {
+      setPendingUnlockProgressLevel(queuedUnlockProgressLevel);
+    }
+
+    setQueuedUnlockProgressLevel(null);
   };
 
   const handleCloseBonusModal = () => {
@@ -333,7 +624,10 @@ function Home({ route }) {
 
     if (eloReward?.eloAnterior && eloReward?.eloAtual) {
       setEloModalVisible(true);
+      return;
     }
+
+    playQueuedUnlockAnimation();
   };
 
   const handleCloseEloModal = () => {
@@ -342,10 +636,14 @@ function Home({ route }) {
       eloAnterior: null,
       eloAtual: null,
     });
+
+    playQueuedUnlockAnimation();
   };
 
   const lockedLessonNumber = Number(lockedLessonInfo.lessonNumber);
-  const previousLessonNumber = lockedLessonNumber > 1 ? lockedLessonNumber - 1 : null;
+
+  const previousLessonNumber =
+    lockedLessonNumber > 1 ? lockedLessonNumber - 1 : null;
 
   const lockedLessonMessage = previousLessonNumber
     ? `Complete a Lição ${String(previousLessonNumber).padStart(
@@ -353,6 +651,10 @@ function Home({ route }) {
         '0',
       )} para \n desbloquear esta lição.`
     : 'Complete a lição anterior para desbloquear esta lição.';
+
+  if (isLoadingFeeds) {
+    return <BatutaLoader text="Carregando lições..." />;
+  }
 
   return (
     <HomeContainer>
@@ -363,8 +665,8 @@ function Home({ route }) {
       />
 
       <FlatList
-        data={staticFeeds.feeds}
-        keyExtractor={(lesson) => lesson.lesson}
+        data={feeds}
+        keyExtractor={(lesson) => String(lesson.lesson)}
         renderItem={renderLessonBlock}
         showsVerticalScrollIndicator={false}
         scrollEnabled={!isOnlyLesson2Blocked}

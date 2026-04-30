@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
+import { SafeAreaView } from 'react-native';
+import Modal from 'react-native-modal';
+
 import {
   ImageFeedIcon,
   TextFeedTitle,
   TitleView,
   TouchableFeedItem,
 } from './FeedItemStyles';
-import { SafeAreaView } from 'react-native';
-import Modal from 'react-native-modal';
+
 import ModalItem from '../modal/ModalItem';
-import LockedModal from '../modal/LockedModal'; // 🔥 novo modal
+import LockedModal from '../modal/LockedModal';
 
 const iconMap = {
   'feed01.png': {
@@ -45,27 +47,37 @@ const iconMap = {
   },
 };
 
+const fallbackIcon = iconMap['feed01.png'];
+
 const getIcon = (iconName, isActive) => {
-  const icon = iconMap[iconName];
-  return isActive ? icon?.active : icon?.inactive;
+  const icon = iconMap[iconName] || fallbackIcon;
+  return isActive ? icon.active : icon.inactive;
 };
 
-const FeedItem = ({ title, icon, isActive = true, practiceRoute }) => {
+const FeedItem = ({
+  title,
+  icon,
+  isActive = true,
+  practiceRoute,
+  content,
+}) => {
   const [modalVisible, setModalVisible] = useState(false);
-  const [lockedVisible, setLockedVisible] = useState(false); // 🔥 novo estado
+  const [lockedVisible, setLockedVisible] = useState(false);
 
   const handlePress = () => {
     if (!isActive) {
-      setLockedVisible(true); // abre o modal bloqueado
+      setLockedVisible(true);
       return;
     }
-    setModalVisible(true); // abre modal normal
+
+    setModalVisible(true);
   };
 
   return (
     <SafeAreaView style={{ margin: 10 }}>
-      <TouchableFeedItem onPress={handlePress}>
+      <TouchableFeedItem activeOpacity={0.8} onPress={handlePress}>
         <ImageFeedIcon resizeMode="contain" source={getIcon(icon, isActive)} />
+
         <TitleView>
           <TextFeedTitle style={{ color: isActive ? 'black' : 'gray' }}>
             {title}
@@ -73,7 +85,6 @@ const FeedItem = ({ title, icon, isActive = true, practiceRoute }) => {
         </TitleView>
       </TouchableFeedItem>
 
-      {/* Modal normal */}
       <Modal
         isVisible={modalVisible}
         onBackdropPress={() => setModalVisible(false)}
@@ -87,13 +98,15 @@ const FeedItem = ({ title, icon, isActive = true, practiceRoute }) => {
           onClose={() => setModalVisible(false)}
           title={title}
           practiceRoute={practiceRoute}
+          content={content}
         />
       </Modal>
 
-      {/* Modal bloqueado */}
       <LockedModal
         visible={lockedVisible}
         onClose={() => setLockedVisible(false)}
+        title="Atividade bloqueada"
+        message="Complete a atividade anterior para desbloquear esta."
       />
     </SafeAreaView>
   );

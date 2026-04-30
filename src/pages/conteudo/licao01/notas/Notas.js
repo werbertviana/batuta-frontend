@@ -1,10 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { TouchableOpacity, FlatList, SafeAreaView, Dimensions } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+// src/pages/conteudo/licao01/notas/Notas.js
+
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  TouchableOpacity,
+  FlatList,
+  SafeAreaView,
+  Dimensions,
+} from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import AppIntroSlider from 'react-native-app-intro-slider';
 import FastImage from 'react-native-fast-image';
-import NotasHeader from './NotasHeader';
 import Sound from 'react-native-sound';
+
+import NotasHeader from './NotasHeader';
+import BatutaLoader from '../../../../components/loader/BatutaLoader';
 
 import {
   Container,
@@ -16,7 +25,8 @@ import {
   DivFinal,
 } from './NotasStyles';
 
-// importando imagens
+import { getModuleByContentKey } from '../../../../services/batutaApi';
+
 import Slide01 from '../../../../assets/images/conteudo/licao01/notas/slide01.png';
 import Slide02 from '../../../../assets/images/conteudo/licao01/notas/slide02.png';
 import Slide03 from '../../../../assets/images/conteudo/licao01/notas/slide03.png';
@@ -29,10 +39,8 @@ import Slide09 from '../../../../assets/images/conteudo/licao01/notas/slide09.pn
 import Slide10 from '../../../../assets/images/conteudo/licao01/notas/slide10.png';
 import Slide11 from '../../../../assets/images/conteudo/licao01/notas/slide11.png';
 
-// importando ícones
 import Som from '../../../../assets/icons/sound.png';
 
-// import botões do conteúdo
 import {
   ConteudoNextButton,
   ConteudoDoneButton,
@@ -40,14 +48,26 @@ import {
   ConteudoSkipButton,
 } from '../../../../components/buttons/conteudo/ConteudoButtons';
 
-// import slides estáticos
-import staticSlides from '../../../../data/licao01/notas.json';
+const audioMap = {
+  do: require('../../../../assets/sounds/licao01/notas/do.mp3'),
+  re: require('../../../../assets/sounds/licao01/notas/re.mp3'),
+  mi: require('../../../../assets/sounds/licao01/notas/mi.mp3'),
+  fa: require('../../../../assets/sounds/licao01/notas/fa.mp3'),
+  sol: require('../../../../assets/sounds/licao01/notas/sol.mp3'),
+  la: require('../../../../assets/sounds/licao01/notas/la.mp3'),
+  si: require('../../../../assets/sounds/licao01/notas/si.mp3'),
+  escala: require('../../../../assets/sounds/licao01/notas/escala.mp3'),
+};
 
 function Notas() {
-  const allSlides = staticSlides.slides;
-  const [musica, setMusica] = useState(null);
   const navigation = useNavigation();
+  const route = useRoute();
+
   const { width, height } = Dimensions.get('window');
+
+  const [slides, setSlides] = useState([]);
+  const [musica, setMusica] = useState(null);
+  const [isLoadingSlides, setIsLoadingSlides] = useState(true);
 
   const normalImageStyle = {
     width: width * 0.95,
@@ -64,184 +84,56 @@ function Notas() {
     height: height * 0.38,
   };
 
-  const selected = (music) => {
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadSlides = async () => {
+      try {
+        setIsLoadingSlides(true);
+
+        const contentKey = route?.params?.content ?? '3';
+        const module = await getModuleByContentKey(contentKey);
+
+        const apiSlides = (module?.slides || [])
+          .map((slide) => ({
+            key: String(slide.id),
+            image: slide.image,
+            audios: slide.audios || [],
+            order: slide.order,
+          }))
+          .sort((a, b) => a.order - b.order);
+
+        if (isMounted) {
+          setSlides(apiSlides);
+        }
+      } catch (error) {
+        console.log('[NOTAS] Erro ao carregar slides da API:', error);
+
+        if (isMounted) {
+          setSlides([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingSlides(false);
+        }
+      }
+    };
+
+    loadSlides();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [route?.params?.content]);
+
+  const stopSound = useCallback(() => {
     if (musica) {
       musica.stop(() => {
         musica.release();
         setMusica(null);
       });
-      return;
     }
-
-    PlaySound(music);
-  };
-
-  const PlaySound = (music) => {
-    Sound.setCategory('Playback');
-    let sound = null;
-
-    if (music === 'do') {
-      sound = new Sound(
-        require('../../../../assets/sounds/licao01/notas/do.mp3'),
-        (error) => {
-          if (error) {
-            console.log('Erro ao carregar a nota Dó:', error);
-            return;
-          }
-          sound.play((success) => {
-            if (success) {
-              console.log('Nota Dó terminou de tocar');
-            } else {
-              console.log('Erro ao reproduzir a nota Dó');
-            }
-            setMusica(null);
-          });
-        }
-      );
-    }
-
-    if (music === 're') {
-      sound = new Sound(
-        require('../../../../assets/sounds/licao01/notas/re.mp3'),
-        (error) => {
-          if (error) {
-            console.log('Erro ao carregar a nota Ré:', error);
-            return;
-          }
-          sound.play((success) => {
-            if (success) {
-              console.log('Nota Ré terminou de tocar');
-            } else {
-              console.log('Erro ao reproduzir a nota Ré');
-            }
-            setMusica(null);
-          });
-        }
-      );
-    }
-
-    if (music === 'mi') {
-      sound = new Sound(
-        require('../../../../assets/sounds/licao01/notas/mi.mp3'),
-        (error) => {
-          if (error) {
-            console.log('Erro ao carregar a nota Mi:', error);
-            return;
-          }
-          sound.play((success) => {
-            if (success) {
-              console.log('Nota Mi terminou de tocar');
-            } else {
-              console.log('Erro ao reproduzir a nota Mi');
-            }
-            setMusica(null);
-          });
-        }
-      );
-    }
-
-    if (music === 'fa') {
-      sound = new Sound(
-        require('../../../../assets/sounds/licao01/notas/fa.mp3'),
-        (error) => {
-          if (error) {
-            console.log('Erro ao carregar a nota Fá:', error);
-            return;
-          }
-          sound.play((success) => {
-            if (success) {
-              console.log('Nota Fá terminou de tocar');
-            } else {
-              console.log('Erro ao reproduzir a nota Fá');
-            }
-            setMusica(null);
-          });
-        }
-      );
-    }
-
-    if (music === 'sol') {
-      sound = new Sound(
-        require('../../../../assets/sounds/licao01/notas/sol.mp3'),
-        (error) => {
-          if (error) {
-            console.log('Erro ao carregar a nota Sol:', error);
-            return;
-          }
-          sound.play((success) => {
-            if (success) {
-              console.log('Nota Sol terminou de tocar');
-            } else {
-              console.log('Erro ao reproduzir a nota Sol');
-            }
-            setMusica(null);
-          });
-        }
-      );
-    }
-
-    if (music === 'la') {
-      sound = new Sound(
-        require('../../../../assets/sounds/licao01/notas/la.mp3'),
-        (error) => {
-          if (error) {
-            console.log('Erro ao carregar a nota Lá:', error);
-            return;
-          }
-          sound.play((success) => {
-            if (success) {
-              console.log('Nota Lá terminou de tocar');
-            } else {
-              console.log('Erro ao reproduzir a nota Lá');
-            }
-            setMusica(null);
-          });
-        }
-      );
-    }
-
-    if (music === 'si') {
-      sound = new Sound(
-        require('../../../../assets/sounds/licao01/notas/si.mp3'),
-        (error) => {
-          if (error) {
-            console.log('Erro ao carregar a nota Si:', error);
-            return;
-          }
-          sound.play((success) => {
-            if (success) {
-              console.log('Nota Si terminou de tocar');
-            } else {
-              console.log('Erro ao reproduzir a nota Si');
-            }
-            setMusica(null);
-          });
-        }
-      );
-    }
-
-    if (music === 'escala') {
-      sound = new Sound(
-        require('../../../../assets/sounds/licao01/notas/escala.mp3'),
-        (error) => {
-          if (error) {
-            console.log('Erro ao carregar a escala:', error);
-            return;
-          }
-          sound.play((success) => {
-            if (success) {
-              console.log('Escala terminou de tocar');
-            } else {
-              console.log('Erro ao reproduzir a escala');
-            }
-            setMusica(null);
-          });
-        }
-      );
-    }
-
-    setMusica(sound);
-  };
+  }, [musica]);
 
   useEffect(() => {
     return () => {
@@ -253,6 +145,37 @@ function Notas() {
     };
   }, [musica]);
 
+  const playSound = (audioName) => {
+    const audioSource = audioMap[audioName];
+
+    if (!audioSource) return;
+
+    Sound.setCategory('Playback');
+
+    const sound = new Sound(audioSource, (error) => {
+      if (error) {
+        console.log(`[NOTAS] Erro ao carregar áudio ${audioName}:`, error);
+        return;
+      }
+
+      sound.play(() => {
+        sound.release();
+        setMusica(null);
+      });
+    });
+
+    setMusica(sound);
+  };
+
+  const selected = (audioName) => {
+    if (musica) {
+      stopSound();
+      return;
+    }
+
+    playSound(audioName);
+  };
+
   const Done = () => {
     navigation.navigate('AtivNotas');
   };
@@ -263,147 +186,94 @@ function Notas() {
     return (
       <Wrapper>
         <DivisorLine />
+
         <TouchableOpacity onPress={() => selected(soundName)}>
           <SafeAreaView>
             <ImageSound source={Som} />
           </SafeAreaView>
         </TouchableOpacity>
+
         <DivisorLine />
       </Wrapper>
     );
   };
 
-  const renderFlatNotas01 = (item) => {
-    if (item === 'slide01_03.png') {
-      return (
-        <FlatView>
-          <FastImage
-            resizeMode="contain"
-            source={Slide01}
-            style={normalImageStyle}
-          />
-          <FastImage
-            resizeMode="contain"
-            source={Slide02}
-            style={normalImageStyle}
-          />
-          <FastImage
-            resizeMode="contain"
-            source={Slide03}
-            style={normalImageStyle}
-          />
-        </FlatView>
-      );
+  const renderGroupedNotas01 = () => (
+    <FlatView>
+      <FastImage resizeMode="contain" source={Slide01} style={normalImageStyle} />
+      <FastImage resizeMode="contain" source={Slide02} style={normalImageStyle} />
+      <FastImage resizeMode="contain" source={Slide03} style={normalImageStyle} />
+    </FlatView>
+  );
+
+  const renderGroupedNotas02 = () => (
+    <FlatView>
+      <FastImage resizeMode="contain" source={Slide04} style={noteImageStyle} />
+      {renderSoundBlock('do')}
+
+      <FastImage resizeMode="contain" source={Slide05} style={noteImageStyle} />
+      {renderSoundBlock('re')}
+
+      <FastImage resizeMode="contain" source={Slide06} style={noteImageStyle} />
+      {renderSoundBlock('mi')}
+
+      <FastImage resizeMode="contain" source={Slide07} style={noteImageStyle} />
+      {renderSoundBlock('fa')}
+
+      <FastImage resizeMode="contain" source={Slide08} style={noteImageStyle} />
+      {renderSoundBlock('sol')}
+
+      <FastImage resizeMode="contain" source={Slide09} style={noteImageStyle} />
+      {renderSoundBlock('la')}
+
+      <FastImage resizeMode="contain" source={Slide10} style={noteImageStyle} />
+      {renderSoundBlock('si')}
+
+      <FastImage resizeMode="contain" source={Slide11} style={finalImageStyle} />
+      {renderSoundBlock('escala', true)}
+    </FlatView>
+  );
+
+  const renderGroupedSlide = (imageName) => {
+    if (imageName === 'slide01_03.png') {
+      return renderGroupedNotas01();
+    }
+
+    if (imageName === 'slide04_11.png') {
+      return renderGroupedNotas02();
     }
 
     return null;
   };
 
-  const renderFlatNotas02 = (item) => {
-    if (item === 'slide04_11.png') {
-      return (
-        <FlatView>
-          <FastImage
-            resizeMode="contain"
-            source={Slide04}
-            style={noteImageStyle}
-          />
-          {renderSoundBlock('do')}
+  const renderSlides = ({ item }) => (
+    <Container>
+      <NotasHeader />
 
-          <FastImage
-            resizeMode="contain"
-            source={Slide05}
-            style={noteImageStyle}
-          />
-          {renderSoundBlock('re')}
+      <SlideView>
+        <FlatList
+          data={[item.image]}
+          keyExtractor={(image) => image}
+          renderItem={({ item: imageName }) => renderGroupedSlide(imageName)}
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
+        />
+      </SlideView>
+    </Container>
+  );
 
-          <FastImage
-            resizeMode="contain"
-            source={Slide06}
-            style={noteImageStyle}
-          />
-          {renderSoundBlock('mi')}
+  if (isLoadingSlides) {
+    return <BatutaLoader text="Carregando conteúdo..." />;
+  }
 
-          <FastImage
-            resizeMode="contain"
-            source={Slide07}
-            style={noteImageStyle}
-          />
-          {renderSoundBlock('fa')}
-
-          <FastImage
-            resizeMode="contain"
-            source={Slide08}
-            style={noteImageStyle}
-          />
-          {renderSoundBlock('sol')}
-
-          <FastImage
-            resizeMode="contain"
-            source={Slide09}
-            style={noteImageStyle}
-          />
-          {renderSoundBlock('la')}
-
-          <FastImage
-            resizeMode="contain"
-            source={Slide10}
-            style={noteImageStyle}
-          />
-          {renderSoundBlock('si')}
-
-          <FastImage
-            resizeMode="contain"
-            source={Slide11}
-            style={finalImageStyle}
-          />
-          {renderSoundBlock('escala', true)}
-        </FlatView>
-      );
-    }
-
-    return null;
-  };
-
-  const slideComponents = {
-    'slide01_03.png': (
-      <Container>
-        <NotasHeader />
-        <SlideView>
-          <FlatList
-            data={allSlides}
-            keyExtractor={(items) => items.key}
-            renderItem={(items) => renderFlatNotas01(items.item.image)}
-            showsVerticalScrollIndicator={false}
-            showsHorizontalScrollIndicator={false}
-          />
-        </SlideView>
-      </Container>
-    ),
-    'slide04_11.png': (
-      <Container>
-        <NotasHeader />
-        <SlideView>
-          <FlatList
-            data={allSlides}
-            keyExtractor={(items) => items.key}
-            renderItem={(items) => renderFlatNotas02(items.item.image)}
-            showsVerticalScrollIndicator={false}
-            showsHorizontalScrollIndicator={false}
-          />
-        </SlideView>
-      </Container>
-    ),
-  };
-
-  const renderSlides = ({ item }) => {
-    return slideComponents[item.image] || null;
-  };
+  if (slides.length === 0) {
+    return <BatutaLoader text="Preparando conteúdo..." />;
+  }
 
   return (
     <AppIntroSlider
       renderItem={renderSlides}
-      data={allSlides}
+      data={slides}
       style={{ backgroundColor: '#FFF' }}
       activeDotStyle={{
         marginTop: '6%',
@@ -413,9 +283,9 @@ function Notas() {
         marginTop: '6%',
         backgroundColor: '#D2D3D5',
       }}
-      showSkipButton={true}
-      showPrevButton={true}
-      bottomButton={true}
+      showSkipButton
+      showPrevButton
+      bottomButton
       renderNextButton={ConteudoNextButton}
       renderSkipButton={ConteudoSkipButton}
       renderDoneButton={ConteudoDoneButton}

@@ -1,9 +1,13 @@
-import React from 'react';
+// src/pages/conteudo/licao01/clave/Clave.js
+
+import React, { useState, useEffect } from 'react';
 import { FlatList, Dimensions } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import AppIntroSlider from 'react-native-app-intro-slider';
 import FastImage from 'react-native-fast-image';
+
 import ClaveHeader from './ClaveHeader';
+import BatutaLoader from '../../../../components/loader/BatutaLoader';
 
 import {
   Container,
@@ -11,7 +15,8 @@ import {
   FlatView,
 } from './ClaveStyles';
 
-// importando imagens
+import { getModuleByContentKey } from '../../../../services/batutaApi';
+
 import Slide01 from '../../../../assets/images/conteudo/licao01/clave/slide01.png';
 import Slide02 from '../../../../assets/images/conteudo/licao01/clave/slide02.png';
 import Slide03 from '../../../../assets/images/conteudo/licao01/clave/slide03.png';
@@ -21,7 +26,6 @@ import Slide06 from '../../../../assets/images/conteudo/licao01/clave/slide06.pn
 import Slide07 from '../../../../assets/images/conteudo/licao01/clave/slide07.png';
 import Slide08 from '../../../../assets/images/conteudo/licao01/clave/slide08.png';
 
-// import botões do conteúdo
 import {
   ConteudoNextButton,
   ConteudoDoneButton,
@@ -29,177 +33,120 @@ import {
   ConteudoSkipButton,
 } from '../../../../components/buttons/conteudo/ConteudoButtons';
 
-// import slides estáticos
-import staticSlides from '../../../../data/licao01/clave.json';
+const groupedSlideMap = {
+  'slide01_02.png': [Slide01, Slide02],
+  'slide03_04.png': [Slide03, Slide04],
+  'slide05_06.png': [Slide05, Slide06],
+  'slide07_08.png': [Slide07, Slide08],
+};
 
 function Clave() {
-  const allSlides = staticSlides.slides;
   const navigation = useNavigation();
+  const route = useRoute();
+
   const { width, height } = Dimensions.get('window');
+
+  const [slides, setSlides] = useState([]);
+  const [isLoadingSlides, setIsLoadingSlides] = useState(true);
 
   const normalImageStyle = {
     width: width * 0.95,
     height: height * 0.55,
   };
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadSlides = async () => {
+      try {
+        setIsLoadingSlides(true);
+
+        const contentKey = route?.params?.content ?? '2';
+        const module = await getModuleByContentKey(contentKey);
+
+        const apiSlides = (module?.slides || [])
+          .map((slide) => ({
+            key: String(slide.id),
+            image: slide.image,
+            audios: slide.audios || [],
+            order: slide.order,
+          }))
+          .sort((a, b) => a.order - b.order);
+
+        if (isMounted) {
+          setSlides(apiSlides);
+        }
+      } catch (error) {
+        console.log('[CLAVE] Erro ao carregar slides da API:', error);
+
+        if (isMounted) {
+          setSlides([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingSlides(false);
+        }
+      }
+    };
+
+    loadSlides();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [route?.params?.content]);
+
   const Done = () => {
     navigation.navigate('AtivClave');
   };
 
-  const renderFlatClave = (item) => {
-    if (item === 'slide01_02.png') {
-      return (
-        <FlatView>
-          <FastImage
-            resizeMode="contain"
-            source={Slide01}
-            style={normalImageStyle}
-          />
-          <FastImage
-            resizeMode="contain"
-            source={Slide02}
-            style={normalImageStyle}
-          />
-        </FlatView>
-      );
-    }
+  const renderGroupedImages = (imageName) => {
+    const images = groupedSlideMap[imageName];
 
-    return null;
+    if (!images) return null;
+
+    return (
+      <FlatView>
+        {images.map((source, index) => (
+          <FastImage
+            key={`${imageName}-${index}`}
+            resizeMode="contain"
+            source={source}
+            style={normalImageStyle}
+          />
+        ))}
+      </FlatView>
+    );
   };
 
-  const renderFlatSol = (item) => {
-    if (item === 'slide03_04.png') {
-      return (
-        <FlatView>
-          <FastImage
-            resizeMode="contain"
-            source={Slide03}
-            style={normalImageStyle}
-          />
-          <FastImage
-            resizeMode="contain"
-            source={Slide04}
-            style={normalImageStyle}
-          />
-        </FlatView>
-      );
-    }
+  const renderSlides = ({ item }) => (
+    <Container>
+      <ClaveHeader />
 
-    return null;
-  };
+      <SlideView>
+        <FlatList
+          data={[item.image]}
+          keyExtractor={(image) => image}
+          renderItem={({ item: imageName }) => renderGroupedImages(imageName)}
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
+        />
+      </SlideView>
+    </Container>
+  );
 
-  const renderFlatFa = (item) => {
-    if (item === 'slide05_06.png') {
-      return (
-        <FlatView>
-          <FastImage
-            resizeMode="contain"
-            source={Slide05}
-            style={normalImageStyle}
-          />
-          <FastImage
-            resizeMode="contain"
-            source={Slide06}
-            style={normalImageStyle}
-          />
-        </FlatView>
-      );
-    }
+  if (isLoadingSlides) {
+    return <BatutaLoader text="Carregando conteúdo..." />;
+  }
 
-    return null;
-  };
-
-  const renderFlatDo = (item) => {
-    if (item === 'slide07_08.png') {
-      return (
-        <FlatView>
-          <FastImage
-            resizeMode="contain"
-            source={Slide07}
-            style={normalImageStyle}
-          />
-          <FastImage
-            resizeMode="contain"
-            source={Slide08}
-            style={normalImageStyle}
-          />
-        </FlatView>
-      );
-    }
-
-    return null;
-  };
-
-  const slideComponents = {
-    'slide01_02.png': (
-      <Container>
-        <ClaveHeader />
-        <SlideView>
-          <FlatList
-            data={allSlides}
-            keyExtractor={(items) => items.key}
-            renderItem={(items) => renderFlatClave(items.item.image)}
-            showsVerticalScrollIndicator={false}
-            showsHorizontalScrollIndicator={false}
-          />
-        </SlideView>
-      </Container>
-    ),
-
-    'slide03_04.png': (
-      <Container>
-        <ClaveHeader />
-        <SlideView>
-          <FlatList
-            data={allSlides}
-            keyExtractor={(items) => items.key}
-            renderItem={(items) => renderFlatSol(items.item.image)}
-            showsVerticalScrollIndicator={false}
-            showsHorizontalScrollIndicator={false}
-          />
-        </SlideView>
-      </Container>
-    ),
-
-    'slide05_06.png': (
-      <Container>
-        <ClaveHeader />
-        <SlideView>
-          <FlatList
-            data={allSlides}
-            keyExtractor={(items) => items.key}
-            renderItem={(items) => renderFlatFa(items.item.image)}
-            showsVerticalScrollIndicator={false}
-            showsHorizontalScrollIndicator={false}
-          />
-        </SlideView>
-      </Container>
-    ),
-
-    'slide07_08.png': (
-      <Container>
-        <ClaveHeader />
-        <SlideView>
-          <FlatList
-            data={allSlides}
-            keyExtractor={(items) => items.key}
-            renderItem={(items) => renderFlatDo(items.item.image)}
-            showsVerticalScrollIndicator={false}
-            showsHorizontalScrollIndicator={false}
-          />
-        </SlideView>
-      </Container>
-    ),
-  };
-
-  const renderSlides = ({ item }) => {
-    return slideComponents[item.image] || null;
-  };
+  if (slides.length === 0) {
+    return <BatutaLoader text="Preparando conteúdo..." />;
+  }
 
   return (
     <AppIntroSlider
       renderItem={renderSlides}
-      data={allSlides}
+      data={slides}
       style={{ backgroundColor: '#FFF' }}
       activeDotStyle={{
         marginTop: '6%',
@@ -209,9 +156,9 @@ function Clave() {
         marginTop: '6%',
         backgroundColor: '#D2D3D5',
       }}
-      showSkipButton={true}
-      showPrevButton={true}
-      bottomButton={true}
+      showSkipButton
+      showPrevButton
+      bottomButton
       renderNextButton={ConteudoNextButton}
       renderSkipButton={ConteudoSkipButton}
       renderDoneButton={ConteudoDoneButton}
