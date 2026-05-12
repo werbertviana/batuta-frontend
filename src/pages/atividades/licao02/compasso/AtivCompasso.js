@@ -1,33 +1,27 @@
 // src/pages/atividades/licao02/compasso/AtivCompasso.js
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef } from 'react';
 import { FlatList } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../../../contexts/AuthContext';
 
 import BatutaLoader from '../../../../components/loader/BatutaLoader';
 import useActivitySession from '../../../../hooks/useActivitySession';
 import useActivityFlow from '../../../../hooks/useActivityFlow';
+import useActivityToast from '../../../../hooks/useActivityToast';
+import useSkipInfoPreference from '../../../../hooks/useSkipInfoPreference';
+import useActivityNavigationHandlers from '../../../../hooks/useActivityNavigationHandlers';
 
-import AtivHeader from '../../../../components/ativHeader/AtivHeader';
+import ActivityLayout from '../../../../components/activity/ActivityLayout';
+import QuestionRenderer from '../../../../components/activity/QuestionRenderer';
 
 import {
   AtivContainer,
   ContentContainer,
-  AlternativasContainer,
-  AlternativaContainer2,
   ButtonContainer,
-  QuestaoContainer,
-  QuestaoText,
-  AlternativaContainer,
-  CircleContainer,
-  CircleInline,
-  CircleText,
-  ImageContainer,
-  ImageAlternativa,
-  AlternativaText,
 } from './AtivCompassoStyles';
+
+import * as activityStyles from './AtivCompassoStyles';
 
 import SkipButton from '../../../../components/buttons/atividades/skipButton/SkipButton';
 import NextButton from '../../../../components/buttons/atividades/nextButton/NextButton';
@@ -47,15 +41,17 @@ import LifeLostModal from '../../../../components/modal/LifeLostModal';
 import SkipInfoModal from '../../../../components/modal/SkipInfoModal';
 import AppToast from '../../../../components/toast/AppToast';
 
-import NivelIndicator from '../../../../components/nivel/NivelIndicator';
-
 const MAX_SKIPS_PER_ACTIVITY = 2;
-const OLD_HIDE_SKIP_INFO_KEY = '@batuta:hide_skip_info_modal';
 
-const getHideSkipInfoKey = (user) => {
-  const identifier = user?.email || user?.id;
-  if (!identifier) return null;
-  return `@batuta:hide_skip_info_modal:user:${String(identifier).toLowerCase()}`;
+const imageMap = {
+  'Q01.png': Q01,
+  'Q02.png': Q02,
+  'Q03.png': Q03,
+  'Q04.png': Q04,
+  'Q05.png': Q05,
+  'Q06.png': Q06,
+  'Q07.png': Q07,
+  'Q08.png': Q08,
 };
 
 function AtivCompasso() {
@@ -70,8 +66,22 @@ function AtivCompasso() {
   } = useAuth();
 
   const headerRef = useRef(null);
-  const toastTimeoutRef = useRef(null);
-  const skipInfoShownRef = useRef(false);
+
+  const {
+    toastVisible,
+    toastMessage,
+    toastType,
+    showToast,
+  } = useActivityToast('warning');
+
+  const {
+    skipInfoVisible,
+    shouldShowSkipInfo,
+    showSkipInfo,
+    closeSkipInfo,
+    handleDisableSkipInfoNextTime,
+    resetSkipInfoSession,
+  } = useSkipInfoPreference(user);
 
   const session = useActivitySession('ativ-compasso');
 
@@ -94,6 +104,7 @@ function AtivCompasso() {
     previewActivity,
     completeActivity,
     isSyncing,
+    maxSkips: MAX_SKIPS_PER_ACTIVITY,
   });
 
   const {
@@ -105,6 +116,9 @@ function AtivCompasso() {
     resumoDados,
     lifeModalVisible,
     puladasCount,
+    isSavingLife,
+    isPreviewingActivity,
+    isFinishingActivity,
     confirmarResposta,
     fecharFeedback,
     skip,
@@ -113,166 +127,56 @@ function AtivCompasso() {
     setLifeModalVisible,
   } = flow;
 
-  const [skipInfoVisible, setSkipInfoVisible] = useState(false);
-  const [hideSkipInfo, setHideSkipInfo] = useState(false);
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
+  const {
+    handleRecomecar,
+    handleLifeModalConfirm,
+    handleLifeModalExit,
+    handleCloseActivity,
+  } = useActivityNavigationHandlers({
+    navigation,
+    headerRef,
+    updateGameStats,
+    resetarFlow,
+    resetSession,
+    restartActivity,
+    setLifeModalVisible,
+    resetSkipInfoSession,
+  });
 
-  useEffect(() => {
-    const loadSkipInfoPreference = async () => {
-      try {
-        const key = getHideSkipInfoKey(user);
-        if (!key) return;
+  const handleSelectAlternative = (alternativa) => {
+    if (isSavingLife || isPreviewingActivity || isFinishingActivity) return;
 
-        const value = await AsyncStorage.getItem(key);
-        setHideSkipInfo(value === 'true');
-
-        await AsyncStorage.removeItem(OLD_HIDE_SKIP_INFO_KEY);
-      } catch (e) {
-        console.log(e);
-      }
-    };
-
-    loadSkipInfoPreference();
-
-    return () => {
-      if (toastTimeoutRef.current) {
-        clearTimeout(toastTimeoutRef.current);
-      }
-    };
-  }, [user]);
-
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setToastVisible(true);
-
-    if (toastTimeoutRef.current) {
-      clearTimeout(toastTimeoutRef.current);
-    }
-
-    toastTimeoutRef.current = setTimeout(() => {
-      setToastVisible(false);
-    }, 1800);
+    setRespostaSelecionada(alternativa);
   };
 
   const handleConfirm = async () => {
     const result = await confirmarResposta();
 
     if (result?.error === 'no_selection') {
-      showToast('Selecione uma alternativa');
+      showToast('Selecione uma alternativa', 'warning');
     }
+  };
+
+  const handleCloseFeedback = () => {
+    fecharFeedback();
+  };
+
+  const handleSkipLimit = () => {
+    showToast('Limite de pulos atingido', 'warning');
   };
 
   const handleSkip = () => {
     const result = skip();
 
     if (result?.limit) {
-      showToast('Limite de pulos atingido');
+      handleSkipLimit();
+      return;
     }
 
-    if (!skipInfoShownRef.current && !hideSkipInfo) {
-      skipInfoShownRef.current = true;
-      setSkipInfoVisible(true);
+    if (result?.ok && shouldShowSkipInfo()) {
+      showSkipInfo();
     }
   };
-
-  const handleRecomecar = async () => {
-    resetarFlow();
-    resetSession();
-    await restartActivity();
-  };
-
-  const handleCloseActivity = () => {
-    navigation.navigate('Tab', { screen: 'Home' });
-  };
-
-  const getImages = (imagem) => {
-    switch (imagem) {
-      case 'Q01.png':
-        return <ImageAlternativa source={Q01} resizeMode="contain" />;
-      case 'Q02.png':
-        return <ImageAlternativa source={Q02} resizeMode="contain" />;
-      case 'Q03.png':
-        return <ImageAlternativa source={Q03} resizeMode="contain" />;
-      case 'Q04.png':
-        return <ImageAlternativa source={Q04} resizeMode="contain" />;
-      case 'Q05.png':
-        return <ImageAlternativa source={Q05} resizeMode="contain" />;
-      case 'Q06.png':
-        return <ImageAlternativa source={Q06} resizeMode="contain" />;
-      case 'Q07.png':
-        return <ImageAlternativa source={Q07} resizeMode="contain" />;
-      case 'Q08.png':
-        return <ImageAlternativa source={Q08} resizeMode="contain" />;
-      default:
-        return null;
-    }
-  };
-
-  const tipoQuestao =
-    questaoAtual?.tipo === 'texto' ? 'texto' : 'figura';
-
-  const renderAlternativaFigura = (item) => {
-    const isSelected = respostaSelecionada === item.alternativa;
-
-    return (
-      <AlternativaContainer
-        key={item.alternativa}
-        onPress={() => setRespostaSelecionada(item.alternativa)}
-        style={isSelected ? { borderColor: '#34B1C7' } : null}
-      >
-        <ImageContainer>
-          <CircleContainer style={isSelected ? { borderColor: '#34B1C7' } : null}>
-            <CircleText>{item.alternativa}</CircleText>
-          </CircleContainer>
-
-          {getImages(item.imagem)}
-        </ImageContainer>
-      </AlternativaContainer>
-    );
-  };
-
-  const renderAlternativaTexto = (item) => {
-    const isSelected = respostaSelecionada === item.alternativa;
-
-    return (
-      <AlternativaContainer2
-        key={item.alternativa}
-        onPress={() => setRespostaSelecionada(item.alternativa)}
-        style={isSelected ? { borderColor: '#34B1C7' } : null}
-      >
-        <CircleInline style={isSelected ? { borderColor: '#34B1C7' } : null}>
-          <CircleText>{item.alternativa}</CircleText>
-        </CircleInline>
-
-        <AlternativaText numberOfLines={3}>{item.texto}</AlternativaText>
-      </AlternativaContainer2>
-    );
-  };
-
-  const renderQuestao = () => (
-    <QuestaoContainer>
-      <QuestaoText>{questaoAtual.questao}</QuestaoText>
-
-      <AlternativasContainer
-        style={
-          tipoQuestao === 'texto'
-            ? {
-                flexDirection: 'column',
-                flexWrap: 'nowrap',
-                justifyContent: 'flex-start',
-              }
-            : null
-        }
-      >
-        {questaoAtual.opcoes.map((item) =>
-          tipoQuestao === 'texto'
-            ? renderAlternativaTexto(item)
-            : renderAlternativaFigura(item),
-        )}
-      </AlternativasContainer>
-    </QuestaoContainer>
-  );
 
   if (isLoadingActivity) {
     return <BatutaLoader text="Afinando a atividade..." />;
@@ -284,41 +188,63 @@ function AtivCompasso() {
 
   const progress = (currentIndex + 1) / allAtividades.length;
 
+  const actionsDisabled =
+    isSyncing || isSavingLife || isPreviewingActivity || isFinishingActivity;
+
+  const skipLimitReached = puladasCount >= MAX_SKIPS_PER_ACTIVITY;
+
   return (
-    <AtivContainer>
-      <AtivHeader
-        ref={headerRef}
+    <>
+      <ActivityLayout
+        headerRef={headerRef}
         progress={progress}
+        nivel={questaoAtual?.nivel}
         onClose={handleCloseActivity}
-      />
+        Container={AtivContainer}
+        ContentContainer={ContentContainer}
+        ButtonContainer={ButtonContainer}
+        footer={
+          <>
+            <SkipButton
+              onPress={handleSkip}
+              disabled={actionsDisabled || skipLimitReached}
+              onDisabledPress={skipLimitReached ? handleSkipLimit : undefined}
+              usedSkips={puladasCount}
+              maxSkips={MAX_SKIPS_PER_ACTIVITY}
+            />
 
-      <NivelIndicator nivel={questaoAtual?.nivel} />
-
-      <ContentContainer>
+            <NextButton onPress={handleConfirm} disabled={actionsDisabled} />
+          </>
+        }
+      >
         <FlatList
           data={[questaoAtual]}
           keyExtractor={(item) => item.id}
-          renderItem={renderQuestao}
+          renderItem={() => (
+            <QuestionRenderer
+              questao={questaoAtual}
+              respostaSelecionada={respostaSelecionada}
+              onSelect={handleSelectAlternative}
+              disabled={actionsDisabled}
+              imageMap={imageMap}
+              activityStyles={activityStyles}
+            />
+          )}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ flexGrow: 1, paddingBottom: 8 }}
         />
-      </ContentContainer>
+      </ActivityLayout>
 
-      <ButtonContainer>
-        <SkipButton
-          onPress={handleSkip}
-          usedSkips={puladasCount}
-          maxSkips={MAX_SKIPS_PER_ACTIVITY}
-        />
-
-        <NextButton onPress={handleConfirm} />
-      </ButtonContainer>
-
-      <AppToast visible={toastVisible} message={toastMessage} />
+      <AppToast
+        visible={toastVisible}
+        message={toastMessage}
+        type={toastType}
+      />
 
       <SkipInfoModal
         visible={skipInfoVisible}
-        onClose={() => setSkipInfoVisible(false)}
+        onClose={closeSkipInfo}
+        onDisableNextTime={handleDisableSkipInfoNextTime}
         maxSkips={MAX_SKIPS_PER_ACTIVITY}
       />
 
@@ -326,25 +252,23 @@ function AtivCompasso() {
         visible={feedbackVisible}
         isCorrect={feedbackInfo.isCorrect}
         correctAlternative={feedbackInfo.correctAlternative}
-        onClose={fecharFeedback}
+        onClose={handleCloseFeedback}
       />
 
       <ResumoAtividadeModal
         visible={resumoVisible}
         resumoDados={resumoDados}
+        onClose={finalizarAtividade}
         onRecomecar={handleRecomecar}
         onContinuar={finalizarAtividade}
       />
 
       <LifeLostModal
         visible={lifeModalVisible}
-        onConfirm={() => {
-          setLifeModalVisible(false);
-          handleRecomecar();
-        }}
-        onExit={handleCloseActivity}
+        onConfirm={handleLifeModalConfirm}
+        onExit={handleLifeModalExit}
       />
-    </AtivContainer>
+    </>
   );
 }
 

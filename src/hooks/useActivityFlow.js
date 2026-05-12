@@ -41,6 +41,8 @@ export default function useActivityFlow({
   const errosRef = useRef(0);
   const puladasRef = useRef(0);
 
+  const pendingLifeLossRef = useRef(false);
+
   // =========================
   // VIDA
   // =========================
@@ -61,10 +63,10 @@ export default function useActivityFlow({
     const vidasAntes = getCurrentLives();
     const vidasDepois = Math.max(0, vidasAntes - 1);
 
-    headerRef?.current?.loseLife?.();
-
     try {
       setIsSavingLife(true);
+
+      headerRef?.current?.loseLife?.();
 
       const result = await updateGameStats({
         lifePoints: vidasDepois,
@@ -213,11 +215,10 @@ export default function useActivityFlow({
 
     if (isCorrect) {
       acertosRef.current += 1;
+      pendingLifeLossRef.current = false;
     } else {
       errosRef.current += 1;
-
-      const gameOver = await persistirPerdaDeVida();
-      if (gameOver) return { gameOver: true };
+      pendingLifeLossRef.current = true;
     }
 
     setFeedbackInfo({
@@ -230,10 +231,21 @@ export default function useActivityFlow({
     return { ok: true };
   };
 
-  const fecharFeedback = () => {
+  const fecharFeedback = async () => {
     if (isSavingLife || isPreviewingActivity || isFinishingActivity) return;
 
+    const shouldLoseLife = pendingLifeLossRef.current;
+
     setFeedbackVisible(false);
+
+    if (shouldLoseLife) {
+      pendingLifeLossRef.current = false;
+
+      const gameOver = await persistirPerdaDeVida();
+
+      if (gameOver) return;
+    }
+
     irParaProximaOuResumo();
   };
 
@@ -263,6 +275,7 @@ export default function useActivityFlow({
     acertosRef.current = 0;
     errosRef.current = 0;
     puladasRef.current = 0;
+    pendingLifeLossRef.current = false;
 
     setPuladasCount(0);
     setResumoVisible(false);

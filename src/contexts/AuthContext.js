@@ -44,6 +44,13 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  const updateUser = useCallback((userData) => {
+    setUser((currentUser) => ({
+      ...(currentUser || {}),
+      ...(userData || {}),
+    }));
+  }, []);
+
   const updateGameStats = useCallback(
     async (partialGameStats) => {
       if (!user?.id) {
@@ -215,6 +222,8 @@ export function AuthProvider({ children }) {
       isSyncing,
       login,
       logout,
+      setUser,
+      updateUser,
       updateGameStats,
       previewActivity,
       completeActivity,
@@ -224,6 +233,7 @@ export function AuthProvider({ children }) {
       isSyncing,
       login,
       logout,
+      updateUser,
       updateGameStats,
       previewActivity,
       completeActivity,

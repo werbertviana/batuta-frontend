@@ -1,31 +1,27 @@
 // src/pages/atividades/licao01/pauta/AtivPauta.js
 
-import React, { useState, useRef, useEffect } from 'react';
-import { View, FlatList } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useRef } from 'react';
+import { FlatList } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../../../contexts/AuthContext';
 
-import AtivHeader from '../../../../components/ativHeader/AtivHeader';
 import BatutaLoader from '../../../../components/loader/BatutaLoader';
 import useActivitySession from '../../../../hooks/useActivitySession';
 import useActivityFlow from '../../../../hooks/useActivityFlow';
+import useActivityToast from '../../../../hooks/useActivityToast';
+import useSkipInfoPreference from '../../../../hooks/useSkipInfoPreference';
+import useActivityNavigationHandlers from '../../../../hooks/useActivityNavigationHandlers';
+
+import ActivityLayout from '../../../../components/activity/ActivityLayout';
+import QuestionRenderer from '../../../../components/activity/QuestionRenderer';
 
 import {
   AtivContainer,
   ContentContainer,
-  AlternativasContainer,
-  AlternativaContainer2,
   ButtonContainer,
-  QuestaoText,
-  AlternativaContainer,
-  CircleContainer,
-  CircleInline,
-  ImageContainer,
-  ImageAlternativa,
-  AlternativaText,
-  CircleText,
 } from './AtivPautaStyles';
+
+import * as activityStyles from './AtivPautaStyles';
 
 import SkipButton from '../../../../components/buttons/atividades/skipButton/SkipButton';
 import NextButton from '../../../../components/buttons/atividades/nextButton/NextButton';
@@ -40,16 +36,14 @@ import ResumoAtividadeModal from '../../../../components/modal/ResumoAtividadeMo
 import LifeLostModal from '../../../../components/modal/LifeLostModal';
 import SkipInfoModal from '../../../../components/modal/SkipInfoModal';
 import AppToast from '../../../../components/toast/AppToast';
-import NivelIndicator from '../../../../components/nivel/NivelIndicator';
 
 const MAX_SKIPS_PER_ACTIVITY = 2;
-const OLD_HIDE_SKIP_INFO_KEY = '@batuta:hide_skip_info_modal';
 
-const getHideSkipInfoKey = (user) => {
-  const identifier = user?.email || user?.id;
-  if (!identifier) return null;
-
-  return `@batuta:hide_skip_info_modal:user:${String(identifier).toLowerCase()}`;
+const imageMap = {
+  'Q01.png': Q01,
+  'Q02.png': Q02,
+  'Q03.png': Q03,
+  'Q04.png': Q04,
 };
 
 function AtivPauta() {
@@ -64,8 +58,22 @@ function AtivPauta() {
   } = useAuth();
 
   const headerRef = useRef(null);
-  const toastTimeoutRef = useRef(null);
-  const skipInfoShownRef = useRef(false);
+
+  const {
+    toastVisible,
+    toastMessage,
+    toastType,
+    showToast,
+  } = useActivityToast('warning');
+
+  const {
+    skipInfoVisible,
+    shouldShowSkipInfo,
+    showSkipInfo,
+    closeSkipInfo,
+    handleDisableSkipInfoNextTime,
+    resetSkipInfoSession,
+  } = useSkipInfoPreference(user);
 
   const session = useActivitySession('ativ-pauta');
 
@@ -111,90 +119,21 @@ function AtivPauta() {
     setLifeModalVisible,
   } = flow;
 
-  const [skipInfoVisible, setSkipInfoVisible] = useState(false);
-  const [hideSkipInfo, setHideSkipInfo] = useState(false);
-
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastType, setToastType] = useState('warning');
-
-  useEffect(() => {
-    const loadSkipInfoPreference = async () => {
-      try {
-        const key = getHideSkipInfoKey(user);
-
-        if (!key) {
-          setHideSkipInfo(false);
-          return;
-        }
-
-        const value = await AsyncStorage.getItem(key);
-
-        setHideSkipInfo(value === 'true');
-
-        await AsyncStorage.removeItem(OLD_HIDE_SKIP_INFO_KEY);
-      } catch (error) {
-        console.log('[AtivPauta] Erro ao carregar preferência:', error);
-      }
-    };
-
-    loadSkipInfoPreference();
-
-    return () => {
-      if (toastTimeoutRef.current) {
-        clearTimeout(toastTimeoutRef.current);
-      }
-    };
-  }, [user?.id, user?.email]);
-
-  const handleDisableSkipInfoNextTime = async () => {
-    try {
-      const key = getHideSkipInfoKey(user);
-
-      if (!key) return;
-
-      await AsyncStorage.setItem(key, 'true');
-      setHideSkipInfo(true);
-    } catch (error) {
-      console.log('[AtivPauta] Erro ao salvar preferência:', error);
-    }
-  };
-
-  const showToast = (message, type = 'warning') => {
-    setToastMessage(message);
-    setToastType(type);
-    setToastVisible(true);
-
-    if (toastTimeoutRef.current) {
-      clearTimeout(toastTimeoutRef.current);
-    }
-
-    toastTimeoutRef.current = setTimeout(() => {
-      setToastVisible(false);
-    }, 1800);
-  };
-
-  const getImages = (imagem) => {
-    switch (imagem) {
-      case 'Q01.png':
-        return <ImageAlternativa resizeMode="contain" source={Q01} />;
-      case 'Q02.png':
-        return <ImageAlternativa resizeMode="contain" source={Q02} />;
-      case 'Q03.png':
-        return <ImageAlternativa resizeMode="contain" source={Q03} />;
-      case 'Q04.png':
-        return <ImageAlternativa resizeMode="contain" source={Q04} />;
-      default:
-        return null;
-    }
-  };
-
-  const tipoQuestaoRaw =
-    typeof questaoAtual?.tipo === 'string'
-      ? questaoAtual.tipo.toLowerCase()
-      : '';
-
-  const tipoQuestao = tipoQuestaoRaw === 'texto' ? 'texto' : 'figura';
+  const {
+    handleRecomecar,
+    handleLifeModalConfirm,
+    handleLifeModalExit,
+    handleCloseActivity,
+  } = useActivityNavigationHandlers({
+    navigation,
+    headerRef,
+    updateGameStats,
+    resetarFlow,
+    resetSession,
+    restartActivity,
+    setLifeModalVisible,
+    resetSkipInfoSession,
+  });
 
   const handleSelectAlternative = (alternativa) => {
     if (isSavingLife || isPreviewingActivity || isFinishingActivity) return;
@@ -210,6 +149,10 @@ function AtivPauta() {
     }
   };
 
+  const handleCloseFeedback = () => {
+    fecharFeedback();
+  };
+
   const handleSkipLimit = () => {
     showToast('Limite de pulos atingido', 'warning');
   };
@@ -222,124 +165,10 @@ function AtivPauta() {
       return;
     }
 
-    if (result?.ok && !skipInfoShownRef.current && !hideSkipInfo) {
-      skipInfoShownRef.current = true;
-      setSkipInfoVisible(true);
+    if (result?.ok && shouldShowSkipInfo()) {
+      showSkipInfo();
     }
   };
-
-  const resetarAtividade = () => {
-    skipInfoShownRef.current = false;
-
-    resetarFlow();
-    resetSession();
-  };
-
-  const handleRecomecar = async () => {
-    resetarAtividade();
-    await restartActivity();
-  };
-
-  const handleLifeModalConfirm = () => {
-    setLifeModalVisible(false);
-    resetarAtividade();
-  };
-
-  const handleLifeModalExit = () => {
-    setLifeModalVisible(false);
-
-    navigation.navigate('Tab', {
-      screen: 'Home',
-      params: {
-        resultadoAtividade: {
-          reward: {
-            aprovado: false,
-            xpGanho: 0,
-            bonusVidaGanha: false,
-            bonusXpGanho: false,
-          },
-        },
-      },
-    });
-  };
-
-  const handleCloseActivity = () => {
-    navigation.navigate('Tab', {
-      screen: 'Home',
-      params: {
-        resultadoAtividade: {
-          reward: {
-            aprovado: false,
-            xpGanho: 0,
-            bonusVidaGanha: false,
-            bonusXpGanho: false,
-          },
-        },
-      },
-    });
-  };
-
-  const renderAlternativaFigura = (alternativa, imagem) => {
-    const isSelected = respostaSelecionada === alternativa;
-
-    return (
-      <AlternativaContainer
-        key={alternativa}
-        onPress={() => handleSelectAlternative(alternativa)}
-        style={isSelected ? { borderColor: '#34B1C7' } : null}
-      >
-        <ImageContainer>
-          <CircleContainer style={isSelected ? { borderColor: '#34B1C7' } : null}>
-            <CircleText>{alternativa}</CircleText>
-          </CircleContainer>
-
-          {getImages(imagem)}
-        </ImageContainer>
-      </AlternativaContainer>
-    );
-  };
-
-  const renderAlternativaTexto = (alternativa, texto) => {
-    const isSelected = respostaSelecionada === alternativa;
-
-    return (
-      <AlternativaContainer2
-        key={alternativa}
-        onPress={() => handleSelectAlternative(alternativa)}
-        style={isSelected ? { borderColor: '#34B1C7' } : null}
-      >
-        <CircleInline style={isSelected ? { borderColor: '#34B1C7' } : null}>
-          <CircleText>{alternativa}</CircleText>
-        </CircleInline>
-
-        <AlternativaText numberOfLines={3}>{texto}</AlternativaText>
-      </AlternativaContainer2>
-    );
-  };
-
-  const renderQuestao = () => (
-    <View>
-      <QuestaoText>{questaoAtual.questao}</QuestaoText>
-
-      <AlternativasContainer
-        style={
-          tipoQuestao === 'texto'
-            ? {
-                flexDirection: 'column',
-                flexWrap: 'nowrap',
-                justifyContent: 'flex-start',
-              }
-            : null
-        }
-      >
-        {questaoAtual.opcoes.map((item) =>
-          tipoQuestao === 'texto'
-            ? renderAlternativaTexto(item.alternativa, item.texto)
-            : renderAlternativaFigura(item.alternativa, item.imagem),
-        )}
-      </AlternativasContainer>
-    </View>
-  );
 
   if (isLoadingActivity) {
     return <BatutaLoader text="Afinando a atividade..." />;
@@ -357,36 +186,46 @@ function AtivPauta() {
   const skipLimitReached = puladasCount >= MAX_SKIPS_PER_ACTIVITY;
 
   return (
-    <AtivContainer>
-      <AtivHeader
-        ref={headerRef}
+    <>
+      <ActivityLayout
+        headerRef={headerRef}
         progress={progress}
+        nivel={questaoAtual?.nivel}
         onClose={handleCloseActivity}
-      />
+        Container={AtivContainer}
+        ContentContainer={ContentContainer}
+        ButtonContainer={ButtonContainer}
+        footer={
+          <>
+            <SkipButton
+              onPress={handleSkip}
+              disabled={actionsDisabled || skipLimitReached}
+              onDisabledPress={skipLimitReached ? handleSkipLimit : undefined}
+              usedSkips={puladasCount}
+              maxSkips={MAX_SKIPS_PER_ACTIVITY}
+            />
 
-      <NivelIndicator nivel={questaoAtual?.nivel} />
-
-      <ContentContainer>
+            <NextButton onPress={handleConfirm} disabled={actionsDisabled} />
+          </>
+        }
+      >
         <FlatList
           data={[questaoAtual]}
           keyExtractor={(item) => item.id}
-          renderItem={renderQuestao}
+          renderItem={() => (
+            <QuestionRenderer
+              questao={questaoAtual}
+              respostaSelecionada={respostaSelecionada}
+              onSelect={handleSelectAlternative}
+              disabled={actionsDisabled}
+              imageMap={imageMap}
+              activityStyles={activityStyles}
+            />
+          )}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ flexGrow: 1, paddingBottom: 8 }}
         />
-      </ContentContainer>
-
-      <ButtonContainer>
-        <SkipButton
-          onPress={handleSkip}
-          disabled={actionsDisabled || skipLimitReached}
-          onDisabledPress={skipLimitReached ? handleSkipLimit : undefined}
-          usedSkips={puladasCount}
-          maxSkips={MAX_SKIPS_PER_ACTIVITY}
-        />
-
-        <NextButton onPress={handleConfirm} disabled={actionsDisabled} />
-      </ButtonContainer>
+      </ActivityLayout>
 
       <AppToast
         visible={toastVisible}
@@ -396,7 +235,7 @@ function AtivPauta() {
 
       <SkipInfoModal
         visible={skipInfoVisible}
-        onClose={() => setSkipInfoVisible(false)}
+        onClose={closeSkipInfo}
         onDisableNextTime={handleDisableSkipInfoNextTime}
         maxSkips={MAX_SKIPS_PER_ACTIVITY}
       />
@@ -405,7 +244,7 @@ function AtivPauta() {
         visible={feedbackVisible}
         isCorrect={feedbackInfo.isCorrect}
         correctAlternative={feedbackInfo.correctAlternative}
-        onClose={fecharFeedback}
+        onClose={handleCloseFeedback}
       />
 
       <ResumoAtividadeModal
@@ -421,7 +260,7 @@ function AtivPauta() {
         onConfirm={handleLifeModalConfirm}
         onExit={handleLifeModalExit}
       />
-    </AtivContainer>
+    </>
   );
 }
 
