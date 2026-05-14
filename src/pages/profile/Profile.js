@@ -41,7 +41,7 @@ function Profile() {
     <Container>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: 24 }}
       >
         <Content>
           <ProfileAvatar
