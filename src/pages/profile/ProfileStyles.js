@@ -10,7 +10,8 @@ const teal = '#34b1c7';
 const gray = '#D2D3D5';
 const textGray = '#5F5F5F';
 
-const avatarSize = Math.min(width * 0.28, 120);
+const avatarSize = Math.min(width * 0.30, 120);
+const avatarInnerSize = avatarSize - 16;
 
 export const Container = styled.View`
   flex: 1;
@@ -38,23 +39,34 @@ export const AvatarCircle = styled.View`
   width: ${avatarSize}px;
   height: ${avatarSize}px;
   border-radius: ${avatarSize / 2}px;
-  border-width: 4px;
+  border-width: 3.5px;
   border-color: ${teal};
   align-items: center;
   justify-content: center;
   background-color: #ffffff;
+  padding: 5px;
+`;
+
+export const AvatarImageWrapper = styled.View`
+  width: ${avatarInnerSize}px;
+  height: ${avatarInnerSize}px;
+  border-radius: ${avatarInnerSize / 2}px;
   overflow: hidden;
+  align-items: center;
+  justify-content: center;
 `;
 
 export const AvatarImage = styled.Image`
   width: 100%;
   height: 100%;
+  border-radius: ${avatarInnerSize / 2}px;
 `;
 
 export const AvatarLoadingOverlay = styled.View`
   position: absolute;
-  width: 100%;
-  height: 100%;
+  width: ${avatarInnerSize}px;
+  height: ${avatarInnerSize}px;
+  border-radius: ${avatarInnerSize / 2}px;
   background-color: rgba(0, 0, 0, 0.35);
   align-items: center;
   justify-content: center;
@@ -67,8 +79,8 @@ export const AvatarLoadingText = styled.Text`
 `;
 
 export const CameraButton = styled.TouchableOpacity`
-  width: 48px;
-  height: 48px;
+  width: 42px;
+  height: 42px;
   border-radius: 24px;
   background-color: ${teal};
   border-width: 4px;
@@ -80,8 +92,8 @@ export const CameraButton = styled.TouchableOpacity`
 `;
 
 export const CameraIcon = styled.Image`
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
 `;
 
 export const ChangePhotoText = styled.Text`
@@ -160,7 +172,7 @@ export const EyeButton = styled.TouchableOpacity`
 
 export const SaveButton = styled.TouchableOpacity`
   width: 100%;
-  height: ${Math.min(height * 0.065, 58)}px;
+  height: ${Math.min(height * 0.070, 58)}px;
   border-radius: 12px;
   background-color: ${teal};
   align-items: center;
@@ -196,7 +208,7 @@ export const AccountBox = styled.View`
 
 export const DeleteButton = styled.TouchableOpacity`
   width: 100%;
-  height: ${Math.min(height * 0.065, 58)}px;
+  height: ${Math.min(height * 0.070, 58)}px;
   background-color: #ffffff;
   border-width: 2px;
   border-color: ${gray};

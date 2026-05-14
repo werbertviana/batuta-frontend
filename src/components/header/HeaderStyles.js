@@ -1,3 +1,5 @@
+// src/components/header/HeaderStyles.js
+
 import styled from 'styled-components/native';
 import FastImage from 'react-native-fast-image';
 
@@ -70,15 +72,8 @@ export const XpText = styled.Text`
     color: #FDC500;
 `;
 
-// 🔓 Logout
 export const LogoutButton = styled.TouchableOpacity`
     padding: 6px;
+    align-items: center;
+    justify-content: center;
 `;
-
-export const LogoutIcon = styled(FastImage)`
-    width: 28px;
-    height: 28px;
-    tint-color: #7A7A7A;
-`;
-
-

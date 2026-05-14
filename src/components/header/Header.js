@@ -1,7 +1,10 @@
+// src/components/header/Header.js
+
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
+
+import Feather from 'react-native-vector-icons/Feather';
 
 import {
   HeaderContainer,
@@ -16,21 +19,25 @@ import {
   XpText,
   LifeText,
   LogoutButton,
-  LogoutIcon,
 } from './HeaderStyles';
 
 import Logo from '../../assets/icons/logo.png';
 import Life from '../../assets/icons/life.png';
 import Batutas from '../../assets/icons/batutas.png';
 import Xp from '../../assets/icons/xp.png';
-import Logout from '../../assets/icons/logout.png'; // 👈 ícone local
 
-const Header = ({ xpPoints = 0, batutaPoints = 0, lifePoints = 2 }) => {
+const Header = ({
+  xpPoints = 0,
+  batutaPoints = 0,
+  lifePoints = 2,
+}) => {
   const navigation = useNavigation();
+
   const { logout } = useAuth();
 
   const handleLogout = () => {
-    logout(); // limpa contexto
+    logout();
+
     navigation.reset({
       index: 0,
       routes: [{ name: 'Login' }],
@@ -43,22 +50,37 @@ const Header = ({ xpPoints = 0, batutaPoints = 0, lifePoints = 2 }) => {
 
       <BatutasContainer>
         <BatutasImage source={Batutas} />
-        <BatutaText>{batutaPoints}</BatutaText>
+
+        <BatutaText>
+          {batutaPoints}
+        </BatutaText>
       </BatutasContainer>
 
       <XpContainer>
         <XpImage source={Xp} />
-        <XpText>{xpPoints}</XpText>
+
+        <XpText>
+          {xpPoints}
+        </XpText>
       </XpContainer>
 
       <LifeContainer>
         <LifeImage source={Life} />
-        <LifeText>{lifePoints}</LifeText>
+
+        <LifeText>
+          {lifePoints}
+        </LifeText>
       </LifeContainer>
 
-      {/* 🔓 LOGOUT */}
-      <LogoutButton onPress={handleLogout}>
-        <LogoutIcon resizeMode={"contain"} source={Logout} />
+      <LogoutButton
+        activeOpacity={0.75}
+        onPress={handleLogout}
+      >
+        <Feather
+          name="log-out"
+          size={26}
+          color="#34b1c7"
+        />
       </LogoutButton>
     </HeaderContainer>
   );
