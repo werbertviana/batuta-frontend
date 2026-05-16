@@ -1,6 +1,6 @@
 // src/pages/atividades/licao01/introducao/AtivIntro.js
 
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { FlatList } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../../../contexts/AuthContext';
@@ -32,8 +32,6 @@ import Q03 from '../../../../assets/images/atividades/licao01/introducao/Q03.png
 import Q04 from '../../../../assets/images/atividades/licao01/introducao/Q04.png';
 
 import FeedbackModal from '../../../../components/modal/FeedbackModal';
-import ResumoAtividadeModal from '../../../../components/modal/ResumoAtividadeModal';
-import LifeLostModal from '../../../../components/modal/LifeLostModal';
 import SkipInfoModal from '../../../../components/modal/SkipInfoModal';
 import AppToast from '../../../../components/toast/AppToast';
 
@@ -48,6 +46,9 @@ const imageMap = {
 
 function AtivIntro() {
   const navigation = useNavigation();
+  const headerRef = useRef(null);
+  const resumoNavigationSentRef = useRef(false);
+  const gameOverNavigationSentRef = useRef(false);
 
   const {
     user,
@@ -56,8 +57,6 @@ function AtivIntro() {
     completeActivity,
     isSyncing,
   } = useAuth();
-
-  const headerRef = useRef(null);
 
   const {
     toastVisible,
@@ -115,8 +114,8 @@ function AtivIntro() {
     fecharFeedback,
     skip,
     resetarFlow,
-    finalizarAtividade,
     setLifeModalVisible,
+    finalizarAtividade,
   } = flow;
 
   const {
@@ -135,7 +134,75 @@ function AtivIntro() {
     resetSkipInfoSession,
   });
 
-  const handleSelectAlternative = (alternativa) => {
+  useEffect(() => {
+    if (!resumoVisible || !resumoDados || resumoNavigationSentRef.current) {
+      return;
+    }
+
+    resumoNavigationSentRef.current = true;
+
+    navigation.navigate('ResumoAtividade', {
+      resumoDados,
+      onRecomecar: () => {
+        resumoNavigationSentRef.current = false;
+        navigation.goBack();
+
+        setTimeout(() => {
+          handleRecomecar();
+        }, 0);
+      },
+      onContinuar: () => {
+        resumoNavigationSentRef.current = false;
+        finalizarAtividade();
+      },
+    });
+  }, [
+    resumoVisible,
+    resumoDados,
+    navigation,
+    handleRecomecar,
+    finalizarAtividade,
+  ]);
+
+  useEffect(() => {
+    if (!lifeModalVisible || gameOverNavigationSentRef.current) {
+      return;
+    }
+
+    gameOverNavigationSentRef.current = true;
+
+    navigation.navigate('GameOver', {
+      acertos: resumoDados?.acertos ?? 0,
+      erros: resumoDados?.erros ?? 2,
+      questaoAtual: currentIndex + 1,
+      totalQuestoes: allAtividades.length,
+      puladasCount,
+
+      onRetry: () => {
+        gameOverNavigationSentRef.current = false;
+        navigation.goBack();
+
+        setTimeout(() => {
+          handleLifeModalConfirm();
+        }, 0);
+      },
+      onExit: () => {
+        gameOverNavigationSentRef.current = false;
+        handleLifeModalExit();
+      },
+    });
+  }, [
+    lifeModalVisible,
+    resumoDados,
+    currentIndex,
+    allAtividades.length,
+    puladasCount,
+    navigation,
+    handleLifeModalConfirm,
+    handleLifeModalExit,
+  ]);
+
+  const handleSelectAlternative = alternativa => {
     if (isSavingLife || isPreviewingActivity || isFinishingActivity) return;
 
     setRespostaSelecionada(alternativa);
@@ -211,7 +278,7 @@ function AtivIntro() {
       >
         <FlatList
           data={[questaoAtual]}
-          keyExtractor={(item) => item.id}
+          keyExtractor={item => item.id}
           renderItem={() => (
             <QuestionRenderer
               questao={questaoAtual}
@@ -245,20 +312,6 @@ function AtivIntro() {
         isCorrect={feedbackInfo.isCorrect}
         correctAlternative={feedbackInfo.correctAlternative}
         onClose={handleCloseFeedback}
-      />
-
-      <ResumoAtividadeModal
-        visible={resumoVisible}
-        resumoDados={resumoDados}
-        onClose={finalizarAtividade}
-        onRecomecar={handleRecomecar}
-        onContinuar={finalizarAtividade}
-      />
-
-      <LifeLostModal
-        visible={lifeModalVisible}
-        onConfirm={handleLifeModalConfirm}
-        onExit={handleLifeModalExit}
       />
     </>
   );
