@@ -62,6 +62,34 @@ export const DeleteMessage = styled.Text`
   margin-bottom: 22px;
 `;
 
+export const PasswordInputWrapper = styled.View`
+  width: 100%;
+  height: 54px;
+  border-width: 2px;
+  border-color: #d2d3d5;
+  border-radius: 12px;
+  padding-horizontal: 14px;
+  justify-content: center;
+  margin-bottom: 8px;
+`;
+
+export const PasswordInput = styled.TextInput`
+  width: 100%;
+  font-family: 'GothamCondensed-Book';
+  font-size: 23px;
+  color: #222222;
+  padding: 0px;
+`;
+
+export const FieldErrorText = styled.Text`
+  width: 100%;
+  font-family: 'GothamCondensed-Medium';
+  font-size: 18px;
+  color: #ff3b3b;
+  text-align: center;
+  margin-bottom: 12px;
+`;
+
 export const ButtonsRow = styled.View`
   width: 100%;
   flex-direction: row;

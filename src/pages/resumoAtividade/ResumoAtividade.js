@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, Text, View, ScrollView } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Text, View, ScrollView } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Sound from 'react-native-sound';
 
@@ -42,6 +42,8 @@ export default function ResumoAtividade() {
   const route = useRoute();
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
+  const [loadingAction, setLoadingAction] = useState(null);
+
   const {
     resumoDados,
     onRecomecar,
@@ -49,6 +51,8 @@ export default function ResumoAtividade() {
     continuarRoute = 'Home',
     recomecarRoute,
   } = route.params || {};
+
+  const isLoading = !!loadingAction;
 
   useEffect(() => {
     Sound.setCategory('Playback');
@@ -99,6 +103,7 @@ export default function ResumoAtividade() {
         if (!success) {
           console.log('Erro ao reproduzir som do resumo');
         }
+
         sound.release();
       });
     });
@@ -110,30 +115,48 @@ export default function ResumoAtividade() {
     };
   }, [aprovado, resumoDados]);
 
-  const handleRecomecarPress = () => {
-    if (onRecomecar) {
-      onRecomecar();
-      return;
-    }
+  const handleRecomecarPress = async () => {
+    if (isLoading) return;
 
-    if (recomecarRoute) {
-      navigation.replace(recomecarRoute);
-      return;
-    }
+    try {
+      setLoadingAction('restart');
 
-    navigation.goBack();
+      if (onRecomecar) {
+        await Promise.resolve(onRecomecar());
+        return;
+      }
+
+      if (recomecarRoute) {
+        navigation.replace(recomecarRoute);
+        return;
+      }
+
+      navigation.goBack();
+    } catch (error) {
+      console.log('[RESUMO] erro ao recomeçar:', error);
+      setLoadingAction(null);
+    }
   };
 
-  const handleContinuarPress = () => {
-    if (onContinuar) {
-      onContinuar();
-      return;
-    }
+  const handleContinuarPress = async () => {
+    if (isLoading) return;
 
-    navigation.reset({
-      index: 0,
-      routes: [{ name: continuarRoute }],
-    });
+    try {
+      setLoadingAction('continue');
+
+      if (onContinuar) {
+        await Promise.resolve(onContinuar());
+        return;
+      }
+
+      navigation.reset({
+        index: 0,
+        routes: [{ name: continuarRoute }],
+      });
+    } catch (error) {
+      console.log('[RESUMO] erro ao continuar:', error);
+      setLoadingAction(null);
+    }
   };
 
   if (!resumoDados) {
@@ -152,7 +175,10 @@ export default function ResumoAtividade() {
             </MessageSubText>
 
             <ButtonsRow>
-              <ActionButton2 isPrimary onPress={() => navigation.navigate('Home')}>
+              <ActionButton2
+                isPrimary
+                onPress={() => navigation.navigate('Home')}
+              >
                 <ActionButtonText>VOLTAR</ActionButtonText>
               </ActionButton2>
             </ButtonsRow>
@@ -264,22 +290,52 @@ export default function ResumoAtividade() {
             <ButtonsRow>
               {aprovado ? (
                 <>
-                  <ActionButton2 isPrimary onPress={handleContinuarPress}>
-                    <ActionButtonText>CONTINUAR</ActionButtonText>
+                  <ActionButton2
+                    isPrimary
+                    onPress={handleContinuarPress}
+                    disabled={isLoading}
+                  >
+                    {loadingAction === 'continue' ? (
+                      <ActivityIndicator color="#ffffff" />
+                    ) : (
+                      <ActionButtonText>CONTINUAR</ActionButtonText>
+                    )}
                   </ActionButton2>
 
-                  <ActionButton onPress={handleRecomecarPress}>
-                    <ActionButtonText>RECOMEÇAR</ActionButtonText>
+                  <ActionButton
+                    onPress={handleRecomecarPress}
+                    disabled={isLoading}
+                  >
+                    {loadingAction === 'restart' ? (
+                      <ActivityIndicator color="#ffffff" />
+                    ) : (
+                      <ActionButtonText>RECOMEÇAR</ActionButtonText>
+                    )}
                   </ActionButton>
                 </>
               ) : (
                 <>
-                  <ActionButton isPrimary onPress={handleRecomecarPress}>
-                    <ActionButtonText>RECOMEÇAR</ActionButtonText>
+                  <ActionButton
+                    isPrimary
+                    onPress={handleRecomecarPress}
+                    disabled={isLoading}
+                  >
+                    {loadingAction === 'restart' ? (
+                      <ActivityIndicator color="#ffffff" />
+                    ) : (
+                      <ActionButtonText>RECOMEÇAR</ActionButtonText>
+                    )}
                   </ActionButton>
 
-                  <ActionButton2 onPress={handleContinuarPress}>
-                    <ActionButtonText>CONTINUAR</ActionButtonText>
+                  <ActionButton2
+                    onPress={handleContinuarPress}
+                    disabled={isLoading}
+                  >
+                    {loadingAction === 'continue' ? (
+                      <ActivityIndicator color="#ffffff" />
+                    ) : (
+                      <ActionButtonText>CONTINUAR</ActionButtonText>
+                    )}
                   </ActionButton2>
                 </>
               )}

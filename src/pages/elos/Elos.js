@@ -1,6 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
+
+import BatutaLoader from '../../components/loader/BatutaLoader';
 
 import {
   Container,
@@ -98,14 +101,49 @@ function normalizeElo(elo) {
   return String(elo || 'ferro').toLowerCase();
 }
 
-export default function Elos() {
-  const { user } = useAuth();
+function getUserElo(user) {
+  return user?.gameStats?.elo || user?.elo || 'ferro';
+}
 
-  const currentEloKey = normalizeElo(user?.elo);
+export default function Elos() {
+  const { user, refreshUser } = useAuth();
+  const [isLoadingElo, setIsLoadingElo] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      async function loadElo() {
+        setIsLoadingElo(true);
+
+        try {
+          await refreshUser?.();
+        } catch (error) {
+          console.log('[ELOS] erro ao carregar elo:', error);
+        } finally {
+          if (isActive) {
+            setIsLoadingElo(false);
+          }
+        }
+      }
+
+      loadElo();
+
+      return () => {
+        isActive = false;
+      };
+    }, [refreshUser]),
+  );
+
+  const currentEloKey = normalizeElo(getUserElo(user));
 
   const currentElo = useMemo(() => {
     return ELOS.find(item => item.key === currentEloKey) || ELOS[0];
   }, [currentEloKey]);
+
+  if (isLoadingElo) {
+    return <BatutaLoader text="Carregando seu elo..." />;
+  }
 
   return (
     <Container>

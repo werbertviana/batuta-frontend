@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, ScrollView, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, ScrollView, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Sound from 'react-native-sound';
 
@@ -36,6 +36,8 @@ export default function GameOver() {
   const route = useRoute();
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
+  const [loadingAction, setLoadingAction] = useState(null);
+
   const {
     onRetry,
     onExit,
@@ -46,6 +48,8 @@ export default function GameOver() {
     totalQuestoes = 0,
     questaoAtual = 0,
   } = route.params || {};
+
+  const isLoading = !!loadingAction;
 
   useEffect(() => {
     Sound.setCategory('Playback');
@@ -97,30 +101,48 @@ export default function GameOver() {
     };
   }, []);
 
-  const handleRetry = () => {
-    if (onRetry) {
-      onRetry();
-      return;
-    }
+  const handleRetry = async () => {
+    if (isLoading) return;
 
-    if (retryRoute) {
-      navigation.replace(retryRoute);
-      return;
-    }
+    try {
+      setLoadingAction('retry');
 
-    navigation.goBack();
+      if (onRetry) {
+        await Promise.resolve(onRetry());
+        return;
+      }
+
+      if (retryRoute) {
+        navigation.replace(retryRoute);
+        return;
+      }
+
+      navigation.goBack();
+    } catch (error) {
+      console.log('[GAME OVER] erro ao tentar novamente:', error);
+      setLoadingAction(null);
+    }
   };
 
-  const handleExit = () => {
-    if (onExit) {
-      onExit();
-      return;
-    }
+  const handleExit = async () => {
+    if (isLoading) return;
 
-    navigation.reset({
-      index: 0,
-      routes: [{ name: exitRoute }],
-    });
+    try {
+      setLoadingAction('exit');
+
+      if (onExit) {
+        await Promise.resolve(onExit());
+        return;
+      }
+
+      navigation.reset({
+        index: 0,
+        routes: [{ name: exitRoute }],
+      });
+    } catch (error) {
+      console.log('[GAME OVER] erro ao sair:', error);
+      setLoadingAction(null);
+    }
   };
 
   const shouldShowReachedQuestion = totalQuestoes > 0 && questaoAtual > 0;
@@ -139,9 +161,7 @@ export default function GameOver() {
               style={{ transform: [{ scale: pulseAnim }] }}
             />
 
-            <Message>
-              Ops! Suas vidas acabaram nesta atividade. 
-            </Message>
+            <Message>Ops! Suas vidas acabaram nesta atividade.</Message>
 
             <InfoBox>
               <InfoLabel>Acertos</InfoLabel>
@@ -166,7 +186,7 @@ export default function GameOver() {
             {shouldShowReachedQuestion && (
               <ProgressBox>
                 <ProgressText>
-                  Você chegou até a questão {questaoAtual} de {totalQuestoes}. 
+                  Você chegou até a questão {questaoAtual} de {totalQuestoes}.
                 </ProgressText>
               </ProgressBox>
             )}
@@ -178,12 +198,20 @@ export default function GameOver() {
             <Divider />
 
             <ButtonsColumn>
-              <RetryButton onPress={handleRetry}>
-                <RetryButtonText>TENTAR NOVAMENTE</RetryButtonText>
+              <RetryButton onPress={handleRetry} disabled={isLoading}>
+                {loadingAction === 'retry' ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <RetryButtonText>TENTAR NOVAMENTE</RetryButtonText>
+                )}
               </RetryButton>
 
-              <ExitButton onPress={handleExit}>
-                <ExitButtonText>SAIR</ExitButtonText>
+              <ExitButton onPress={handleExit} disabled={isLoading}>
+                {loadingAction === 'exit' ? (
+                  <ActivityIndicator color="#333333" />
+                ) : (
+                  <ExitButtonText>SAIR</ExitButtonText>
+                )}
               </ExitButton>
             </ButtonsColumn>
           </Card>
