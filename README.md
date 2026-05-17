@@ -123,7 +123,7 @@ https://github.com/werbertviana
 ---
 
 # ⭐ Contribuição
-Este projeto está em desenvolvimento e novas funcionalidades serão ser adicionadas futuramente.
+Este projeto está em desenvolvimento e novas funcionalidades serão adicionadas futuramente.
 
 ---
 
