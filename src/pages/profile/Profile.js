@@ -133,6 +133,7 @@ function Profile() {
       <DeleteAccountModal
         visible={profile.showDeleteAccountModal}
         loading={profile.isDeletingAccount}
+        error={profile.deleteAccountError}
         onCancel={profile.handleCancelDeleteAccount}
         onConfirm={profile.handleConfirmDeleteAccount}
       />

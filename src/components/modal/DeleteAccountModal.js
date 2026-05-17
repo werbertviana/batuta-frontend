@@ -23,6 +23,7 @@ import {
 function DeleteAccountModal({
   visible,
   loading = false,
+  error = '',
   onCancel,
   onConfirm,
 }) {
@@ -37,6 +38,12 @@ function DeleteAccountModal({
       setPasswordError('');
     }
   }, [visible]);
+
+  useEffect(() => {
+    if (error) {
+      setPasswordError('');
+    }
+  }, [error]);
 
   const handleCancel = () => {
     if (loading) return;
@@ -68,6 +75,7 @@ function DeleteAccountModal({
   };
 
   const isPasswordStep = step === 'password';
+  const visibleError = passwordError || error;
 
   return (
     <Modal
@@ -94,7 +102,7 @@ function DeleteAccountModal({
 
           {isPasswordStep && (
             <>
-              <PasswordInputWrapper>
+              <PasswordInputWrapper hasError={!!visibleError}>
                 <PasswordInput
                   value={password}
                   onChangeText={text => {
@@ -110,9 +118,7 @@ function DeleteAccountModal({
                 />
               </PasswordInputWrapper>
 
-              {!!passwordError && (
-                <FieldErrorText>{passwordError}</FieldErrorText>
-              )}
+              {!!visibleError && <FieldErrorText>{visibleError}</FieldErrorText>}
             </>
           )}
 

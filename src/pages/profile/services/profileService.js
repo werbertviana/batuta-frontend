@@ -17,6 +17,10 @@ export async function parseResponseError(response) {
   }
 }
 
+function getBackendError(errorResponse) {
+  return errorResponse?.error || errorResponse;
+}
+
 export async function updateProfileDataRequest({
   userId,
   name,
@@ -37,9 +41,7 @@ export async function updateProfileDataRequest({
 
   if (!response.ok) {
     const errorResponse = await parseResponseError(response);
-    const backendError = errorResponse?.error || errorResponse;
-
-    throw backendError;
+    throw getBackendError(errorResponse);
   }
 
   return response.json();
@@ -63,18 +65,13 @@ export async function updatePasswordRequest({
 
   if (!response.ok) {
     const errorResponse = await parseResponseError(response);
-    const backendError = errorResponse?.error || errorResponse;
-
-    throw backendError;
+    throw getBackendError(errorResponse);
   }
 
   return response.json();
 }
 
-export async function uploadAvatarRequest({
-  userId,
-  formData,
-}) {
+export async function uploadAvatarRequest({ userId, formData }) {
   const response = await fetch(`${API_BASE_URL}/users/${userId}/avatar`, {
     method: 'PATCH',
     body: formData,
@@ -82,9 +79,7 @@ export async function uploadAvatarRequest({
 
   if (!response.ok) {
     const errorResponse = await parseResponseError(response);
-    const backendError = errorResponse?.error || errorResponse;
-
-    throw backendError;
+    throw getBackendError(errorResponse);
   }
 
   return response.json();
@@ -97,24 +92,27 @@ export async function removeAvatarRequest(userId) {
 
   if (!response.ok) {
     const errorResponse = await parseResponseError(response);
-    const backendError = errorResponse?.error || errorResponse;
-
-    throw backendError;
+    throw getBackendError(errorResponse);
   }
 
   return response.json();
 }
 
-export async function deleteAccountRequest(userId) {
+export async function deleteAccountRequest({ userId, password }) {
   const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
     method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      password,
+      currentPassword: password,
+    }),
   });
 
   if (!response.ok) {
     const errorResponse = await parseResponseError(response);
-    const backendError = errorResponse?.error || errorResponse;
-
-    throw backendError;
+    throw getBackendError(errorResponse);
   }
 
   return true;

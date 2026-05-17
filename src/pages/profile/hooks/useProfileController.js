@@ -35,14 +35,9 @@ function useProfileController({ defaultAvatar }) {
   const [email, setEmail] = useState('');
   const [avatarUrl, setAvatarUrl] = useState(null);
 
-  const [showDeleteAccountModal, setShowDeleteAccountModal] =
-    useState(false);
-
-  const [showPhotoModal, setShowPhotoModal] =
-    useState(false);
-
-  const [showRemovePhotoModal, setShowRemovePhotoModal] =
-    useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [showRemovePhotoModal, setShowRemovePhotoModal] = useState(false);
 
   const [initialName, setInitialName] = useState('');
   const [initialUsername, setInitialUsername] = useState('');
@@ -59,6 +54,8 @@ function useProfileController({ defaultAvatar }) {
   const [currentPasswordError, setCurrentPasswordError] = useState('');
   const [newPasswordError, setNewPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
+
+  const [deleteAccountError, setDeleteAccountError] = useState('');
 
   const [generalError, setGeneralError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -114,11 +111,13 @@ function useProfileController({ defaultAvatar }) {
   useFocusEffect(
     useCallback(() => {
       clearMessages();
+      setDeleteAccountError('');
 
       return () => {
         clearMessages();
+        setDeleteAccountError('');
       };
-    }, [])
+    }, []),
   );
 
   function clearPasswordFields() {
@@ -302,6 +301,24 @@ function useProfileController({ defaultAvatar }) {
     return false;
   }
 
+  function handleDeleteAccountBackendError(backendError) {
+    if (
+      backendError?.code === 'CURRENT_PASSWORD_INVALID' ||
+      backendError?.code === 'INVALID_PASSWORD' ||
+      backendError?.code === 'PASSWORD_REQUIRED'
+    ) {
+      setDeleteAccountError('Senha atual incorreta.');
+      return true;
+    }
+
+    if (backendError?.message?.toLowerCase?.().includes('senha')) {
+      setDeleteAccountError('Senha atual incorreta.');
+      return true;
+    }
+
+    return false;
+  }
+
   async function updateProfileData() {
     try {
       const updatedUser = await updateProfileDataRequest({
@@ -334,7 +351,7 @@ function useProfileController({ defaultAvatar }) {
       }
 
       throw new Error(
-        backendError?.message || 'Erro ao atualizar dados do perfil.'
+        backendError?.message || 'Erro ao atualizar dados do perfil.',
       );
     }
   }
@@ -394,7 +411,7 @@ function useProfileController({ defaultAvatar }) {
       console.log('ERRO AO ALTERAR FOTO:', backendError);
       setGeneralError(
         backendError?.message ||
-          'Não foi possível alterar a foto. Tente novamente.'
+          'Não foi possível alterar a foto. Tente novamente.',
       );
     } finally {
       setIsUploadingAvatar(false);
@@ -426,7 +443,7 @@ function useProfileController({ defaultAvatar }) {
         quality: 0.8,
         selectionLimit: 1,
       },
-      handleImagePickerResponse
+      handleImagePickerResponse,
     );
   }
 
@@ -437,7 +454,7 @@ function useProfileController({ defaultAvatar }) {
         quality: 0.8,
         saveToPhotos: false,
       },
-      handleImagePickerResponse
+      handleImagePickerResponse,
     );
   }
 
@@ -501,26 +518,38 @@ function useProfileController({ defaultAvatar }) {
       console.log('ERRO AO REMOVER FOTO:', backendError);
       setGeneralError(
         backendError?.message ||
-          'Não foi possível remover a foto. Tente novamente.'
+          'Não foi possível remover a foto. Tente novamente.',
       );
     } finally {
       setIsUploadingAvatar(false);
     }
   }
 
-  async function deleteAccount() {
+  async function deleteAccount(password) {
     clearMessages();
+    setDeleteAccountError('');
     setIsDeletingAccount(true);
 
     try {
-      await deleteAccountRequest(user.id);
+      await deleteAccountRequest({
+        userId: user.id,
+        password,
+      });
+
+      setShowDeleteAccountModal(false);
+
       await clearAuthSession();
       goToLogin();
     } catch (backendError) {
       console.log('ERRO AO EXCLUIR CONTA:', backendError);
-      setGeneralError(
+
+      if (handleDeleteAccountBackendError(backendError)) {
+        return;
+      }
+
+      setDeleteAccountError(
         backendError?.message ||
-          'Não foi possível excluir a conta. Tente novamente.'
+          'Não foi possível excluir a conta. Tente novamente.',
       );
     } finally {
       setIsDeletingAccount(false);
@@ -530,19 +559,27 @@ function useProfileController({ defaultAvatar }) {
   function handleDeleteAccount() {
     if (!user?.id || isDeletingAccount) return;
 
+    clearMessages();
+    setDeleteAccountError('');
     setShowDeleteAccountModal(true);
   }
 
   function handleCancelDeleteAccount() {
     if (isDeletingAccount) return;
 
+    setDeleteAccountError('');
     setShowDeleteAccountModal(false);
   }
 
-  async function handleConfirmDeleteAccount() {
-    setShowDeleteAccountModal(false);
+  async function handleConfirmDeleteAccount(password) {
+    if (!password?.trim()) {
+      setDeleteAccountError('Digite sua senha para confirmar.');
+      return;
+    }
 
-    await deleteAccount();
+    setDeleteAccountError('');
+
+    await deleteAccount(password);
   }
 
   async function handleSaveChanges() {
@@ -613,6 +650,8 @@ function useProfileController({ defaultAvatar }) {
     currentPasswordError,
     newPasswordError,
     confirmPasswordError,
+
+    deleteAccountError,
 
     generalError,
     successMessage,

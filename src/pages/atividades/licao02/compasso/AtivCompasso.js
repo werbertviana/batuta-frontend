@@ -1,6 +1,6 @@
 // src/pages/atividades/licao02/compasso/AtivCompasso.js
 
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { FlatList } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../../../contexts/AuthContext';
@@ -11,6 +11,7 @@ import useActivityFlow from '../../../../hooks/useActivityFlow';
 import useActivityToast from '../../../../hooks/useActivityToast';
 import useSkipInfoPreference from '../../../../hooks/useSkipInfoPreference';
 import useActivityNavigationHandlers from '../../../../hooks/useActivityNavigationHandlers';
+import useActivityResultNavigation from '../../../../hooks/useActivityResultNavigation';
 
 import ActivityLayout from '../../../../components/activity/ActivityLayout';
 import QuestionRenderer from '../../../../components/activity/QuestionRenderer';
@@ -55,8 +56,6 @@ const imageMap = {
 function AtivCompasso() {
   const navigation = useNavigation();
   const headerRef = useRef(null);
-  const resumoNavigationSentRef = useRef(false);
-  const gameOverNavigationSentRef = useRef(false);
 
   const {
     user,
@@ -142,73 +141,23 @@ function AtivCompasso() {
     resetSkipInfoSession,
   });
 
-  useEffect(() => {
-    if (!resumoVisible || !resumoDados || resumoNavigationSentRef.current) {
-      return;
-    }
+  useActivityResultNavigation({
+    activityName: 'AtivCompasso',
+    navigation,
 
-    resumoNavigationSentRef.current = true;
-
-    navigation.navigate('ResumoAtividade', {
-      resumoDados,
-      onRecomecar: () => {
-        resumoNavigationSentRef.current = false;
-        navigation.goBack();
-
-        setTimeout(() => {
-          handleRecomecar();
-        }, 0);
-      },
-      onContinuar: () => {
-        resumoNavigationSentRef.current = false;
-        finalizarAtividade();
-      },
-    });
-  }, [
     resumoVisible,
     resumoDados,
-    navigation,
-    handleRecomecar,
-    finalizarAtividade,
-  ]);
-
-  useEffect(() => {
-    if (!lifeModalVisible || gameOverNavigationSentRef.current) {
-      return;
-    }
-
-    gameOverNavigationSentRef.current = true;
-
-    navigation.navigate('GameOver', {
-      acertos: resumoDados?.acertos ?? 0,
-      erros: resumoDados?.erros ?? 2,
-      questaoAtual: currentIndex + 1,
-      totalQuestoes: allAtividades.length,
-      puladasCount,
-
-      onRetry: () => {
-        gameOverNavigationSentRef.current = false;
-        navigation.goBack();
-
-        setTimeout(() => {
-          handleLifeModalConfirm();
-        }, 0);
-      },
-      onExit: () => {
-        gameOverNavigationSentRef.current = false;
-        handleLifeModalExit();
-      },
-    });
-  }, [
     lifeModalVisible,
-    resumoDados,
+
     currentIndex,
-    allAtividades.length,
+    totalQuestoes: allAtividades.length,
     puladasCount,
-    navigation,
-    handleLifeModalConfirm,
-    handleLifeModalExit,
-  ]);
+
+    onRecomecar: handleRecomecar,
+    onContinuar: finalizarAtividade,
+    onRetry: handleLifeModalConfirm,
+    onExit: handleLifeModalExit,
+  });
 
   const handleSelectAlternative = alternativa => {
     if (isSavingLife || isPreviewingActivity || isFinishingActivity) return;

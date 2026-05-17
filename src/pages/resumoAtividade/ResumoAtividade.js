@@ -3,6 +3,8 @@ import { ActivityIndicator, Animated, Text, View, ScrollView } from 'react-nativ
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Sound from 'react-native-sound';
 
+import { getActivityCallbacks } from '../../hooks/activityNavigationRegistry';
+
 import {
   Container,
   Content,
@@ -45,13 +47,13 @@ export default function ResumoAtividade() {
   const [loadingAction, setLoadingAction] = useState(null);
 
   const {
+    callbackKey,
     resumoDados,
-    onRecomecar,
-    onContinuar,
     continuarRoute = 'Home',
     recomecarRoute,
   } = route.params || {};
 
+  const callbacks = getActivityCallbacks(callbackKey);
   const isLoading = !!loadingAction;
 
   useEffect(() => {
@@ -121,8 +123,8 @@ export default function ResumoAtividade() {
     try {
       setLoadingAction('restart');
 
-      if (onRecomecar) {
-        await Promise.resolve(onRecomecar());
+      if (callbacks?.onRecomecar) {
+        await Promise.resolve(callbacks.onRecomecar());
         return;
       }
 
@@ -144,8 +146,8 @@ export default function ResumoAtividade() {
     try {
       setLoadingAction('continue');
 
-      if (onContinuar) {
-        await Promise.resolve(onContinuar());
+      if (callbacks?.onContinuar) {
+        await Promise.resolve(callbacks.onContinuar());
         return;
       }
 

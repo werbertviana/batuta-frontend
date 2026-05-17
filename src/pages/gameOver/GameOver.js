@@ -3,6 +3,8 @@ import { ActivityIndicator, Animated, ScrollView, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Sound from 'react-native-sound';
 
+import { getActivityCallbacks } from '../../hooks/activityNavigationRegistry';
+
 import {
   Container,
   Content,
@@ -39,8 +41,7 @@ export default function GameOver() {
   const [loadingAction, setLoadingAction] = useState(null);
 
   const {
-    onRetry,
-    onExit,
+    callbackKey,
     retryRoute,
     exitRoute = 'Home',
     acertos = 0,
@@ -49,6 +50,7 @@ export default function GameOver() {
     questaoAtual = 0,
   } = route.params || {};
 
+  const callbacks = getActivityCallbacks(callbackKey);
   const isLoading = !!loadingAction;
 
   useEffect(() => {
@@ -107,8 +109,8 @@ export default function GameOver() {
     try {
       setLoadingAction('retry');
 
-      if (onRetry) {
-        await Promise.resolve(onRetry());
+      if (callbacks?.onRetry) {
+        await Promise.resolve(callbacks.onRetry());
         return;
       }
 
@@ -130,8 +132,8 @@ export default function GameOver() {
     try {
       setLoadingAction('exit');
 
-      if (onExit) {
-        await Promise.resolve(onExit());
+      if (callbacks?.onExit) {
+        await Promise.resolve(callbacks.onExit());
         return;
       }
 
