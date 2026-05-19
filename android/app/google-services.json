@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "182427705211",
+    "project_id": "batuta-412414",
+    "storage_bucket": "batuta-412414.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:182427705211:android:e67ee6febcebd73fab27de",
+        "android_client_info": {
+          "package_name": "com.batuta"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "182427705211-etr0op0svr2ll6jcctu38srecj1j9hdh.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.batuta",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "182427705211-2qiu01jp343n2o8aofhpjqpksn4iicbo.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAObRA0GgQHU8YrIFx1zID2fqs7qRQfBSU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "182427705211-2qiu01jp343n2o8aofhpjqpksn4iicbo.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

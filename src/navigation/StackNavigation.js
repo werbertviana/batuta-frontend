@@ -32,8 +32,7 @@ import AtivCompasso from '../pages/atividades/licao02/compasso/AtivCompasso';
 import ResumoAtividade from '../pages/resumoAtividade/ResumoAtividade';
 import GameOver from '../pages/gameOver/GameOver';
 
-// importação da página de feedback
-import Feedback from '../pages/feedback/Feedback';
+
 
 // importação tela de login
 import LoginScreen from '../screens/auth/LoginScreen';
@@ -79,7 +78,7 @@ function StackNavigation() {
       <Stack.Screen name="ResumoAtividade" component={ResumoAtividade} />
       <Stack.Screen name="GameOver" component={GameOver} />
 
-      <Stack.Screen name="Feedback" component={Feedback} />
+
       <Stack.Screen name="Login" component={LoginScreen} />
     </Stack.Navigator>
   );

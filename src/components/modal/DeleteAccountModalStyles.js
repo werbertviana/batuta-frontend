@@ -1,6 +1,12 @@
 // src/components/modal/DeleteAccountModalStyles.js
 
 import styled from 'styled-components/native';
+import { Dimensions } from 'react-native';
+
+const { width, height } = Dimensions.get('window');
+
+const modalWidth = Math.min(width * 0.88, 360);
+const iconSize = Math.min(width * 0.23, 92);
 
 export const Overlay = styled.View`
   flex: 1;
@@ -11,10 +17,9 @@ export const Overlay = styled.View`
 `;
 
 export const DeleteContainer = styled.View`
-  width: 100%;
-  max-width: 340px;
+  width: ${modalWidth}px;
   background-color: #ffffff;
-  padding: 28px 24px 24px;
+  padding: 26px 22px 22px;
   border-radius: 28px;
   align-items: center;
   justify-content: center;
@@ -26,9 +31,9 @@ export const DeleteContainer = styled.View`
 `;
 
 export const DeleteIconWrapper = styled.View`
-  width: 92px;
-  height: 92px;
-  border-radius: 46px;
+  width: ${iconSize}px;
+  height: ${iconSize}px;
+  border-radius: ${iconSize / 2}px;
   background-color: #fff3f3;
   border-width: 3px;
   border-color: #ff3b3b;
@@ -39,15 +44,15 @@ export const DeleteIconWrapper = styled.View`
 
 export const DeleteIconCircle = styled.Text`
   font-family: 'GothamCondensed-Medium';
-  font-size: 58px;
-  line-height: 62px;
+  font-size: ${Math.min(width * 0.15, 58)}px;
+  line-height: ${Math.min(width * 0.16, 62)}px;
   color: #ff3b3b;
   text-align: center;
 `;
 
 export const DeleteTitle = styled.Text`
   font-family: 'GothamCondensed-Medium';
-  font-size: 32px;
+  font-size: ${Math.min(width * 0.09, 34)}px;
   color: #222222;
   text-align: center;
   margin-bottom: 10px;
@@ -55,8 +60,8 @@ export const DeleteTitle = styled.Text`
 
 export const DeleteMessage = styled.Text`
   font-family: 'GothamCondensed-Book';
-  font-size: 25px;
-  line-height: 27px;
+  font-size: ${Math.min(width * 0.062, 25)}px;
+  line-height: ${Math.min(width * 0.072, 29)}px;
   color: #444444;
   text-align: center;
   margin-bottom: 22px;
@@ -64,7 +69,7 @@ export const DeleteMessage = styled.Text`
 
 export const PasswordInputWrapper = styled.View`
   width: 100%;
-  height: 54px;
+  height: ${Math.min(height * 0.064, 54)}px;
   border-width: 2px;
   border-color: #d2d3d5;
   border-radius: 12px;
@@ -76,7 +81,7 @@ export const PasswordInputWrapper = styled.View`
 export const PasswordInput = styled.TextInput`
   width: 100%;
   font-family: 'GothamCondensed-Book';
-  font-size: 23px;
+  font-size: ${Math.min(width * 0.058, 23)}px;
   color: #222222;
   padding: 0px;
 `;
@@ -84,7 +89,7 @@ export const PasswordInput = styled.TextInput`
 export const FieldErrorText = styled.Text`
   width: 100%;
   font-family: 'GothamCondensed-Medium';
-  font-size: 18px;
+  font-size: ${Math.min(width * 0.046, 18)}px;
   color: #ff3b3b;
   text-align: center;
   margin-bottom: 12px;
@@ -103,7 +108,9 @@ export const CancelButton = styled.TouchableOpacity`
   border-radius: 12px;
   justify-content: center;
   align-items: center;
-  height: 56px;
+  min-height: 58px;
+  padding-horizontal: 8px;
+  padding-vertical: 6px;
   border-bottom-width: 4px;
   border-left-width: 0.5px;
   border-right-width: 0.5px;
@@ -112,7 +119,8 @@ export const CancelButton = styled.TouchableOpacity`
 export const CancelButtonText = styled.Text`
   font-family: 'GothamCondensed-Medium';
   color: #444444;
-  font-size: 24px;
+  font-size: ${Math.min(width * 0.062, 24)}px;
+  text-align: center;
 `;
 
 export const ConfirmButton = styled.TouchableOpacity`
@@ -122,7 +130,9 @@ export const ConfirmButton = styled.TouchableOpacity`
   border-radius: 12px;
   justify-content: center;
   align-items: center;
-  height: 56px;
+  min-height: 58px;
+  padding-horizontal: 8px;
+  padding-vertical: 6px;
   border-bottom-width: 4px;
   border-left-width: 0.5px;
   border-right-width: 0.5px;
@@ -131,5 +141,7 @@ export const ConfirmButton = styled.TouchableOpacity`
 export const ConfirmButtonText = styled.Text`
   font-family: 'GothamCondensed-Medium';
   color: #ffffff;
-  font-size: 24px;
+  font-size: ${Math.min(width * 0.051, 20)}px;
+  line-height: ${Math.min(width * 0.058, 23)}px;
+  text-align: center;
 `;

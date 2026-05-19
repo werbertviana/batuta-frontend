@@ -7,14 +7,19 @@ buildscript {
         ndkVersion = "28.0.12916984"
         kotlinVersion = "2.0.21"
     }
+
     repositories {
         google()
         mavenCentral()
     }
+
     dependencies {
         classpath("com.android.tools.build:gradle")
         classpath("com.facebook.react:react-native-gradle-plugin")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
+
+        // GOOGLE SERVICES
+        classpath("com.google.gms:google-services:4.4.2")
     }
 }
 

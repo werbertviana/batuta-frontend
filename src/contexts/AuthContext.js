@@ -6,6 +6,7 @@ import React, {
   useCallback,
 } from 'react';
 import { Platform } from 'react-native';
+import { GoogleSignin } from '../services/googleAuth';
 
 const AuthContext = createContext(null);
 
@@ -50,13 +51,10 @@ function extractUserPatchFromResponse(data) {
   if (!data) return null;
 
   const patch = {};
-
   const reward = data?.reward ?? data?.data?.reward ?? null;
   const user = extractUserFromResponse(data);
 
-  if (user) {
-    return user;
-  }
+  if (user) return user;
 
   if (data.elo) patch.elo = data.elo;
   if (data.xp !== undefined) patch.xp = data.xp;
@@ -75,6 +73,20 @@ function extractUserPatchFromResponse(data) {
   return Object.keys(patch).length > 0 ? patch : null;
 }
 
+function getBackendErrorMessage(data, fallback = 'Erro ao fazer login com Google.') {
+  const backendMessage =
+    data?.error?.message ||
+    data?.message ||
+    data?.error ||
+    fallback;
+
+  const backendCode =
+    data?.error?.code ||
+    data?.code;
+
+  return backendCode ? `${backendMessage} (${backendCode})` : backendMessage;
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -88,7 +100,111 @@ export function AuthProvider({ children }) {
     setUser(userData);
   }, []);
 
-  const logout = useCallback(() => {
+  const loginWithGoogle = useCallback(async () => {
+    try {
+      setIsSyncing(true);
+
+      console.log('[AUTH] loginWithGoogle: iniciando');
+
+      await GoogleSignin.hasPlayServices({
+        showPlayServicesUpdateDialog: true,
+      });
+
+      try {
+        await GoogleSignin.signOut();
+      } catch (signOutErr) {
+        console.log('[AUTH] loginWithGoogle signOut ignorado:', signOutErr);
+      }
+
+      const googleUser = await GoogleSignin.signIn();
+
+      console.log('[AUTH] loginWithGoogle googleUser:', googleUser);
+
+      const idToken =
+        googleUser?.data?.idToken ||
+        googleUser?.idToken ||
+        googleUser?.serverAuthCode;
+
+      if (!idToken) {
+        console.log('[AUTH] loginWithGoogle: idToken não encontrado', googleUser);
+
+        return {
+          ok: false,
+          reason: 'NO_GOOGLE_ID_TOKEN',
+          message: 'Não foi possível obter o token do Google.',
+          data: googleUser,
+        };
+      }
+
+      console.log('[AUTH] loginWithGoogle: enviando token para backend');
+
+      const response = await fetch(`${API_BASE}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
+
+      const data = await safeParseJson(response);
+
+      if (!response.ok) {
+        const message = getBackendErrorMessage(data);
+
+        console.log('[AUTH] loginWithGoogle ERRO STATUS:', response.status);
+        console.log('[AUTH] loginWithGoogle ERRO DATA:', data);
+        console.log('[AUTH] loginWithGoogle ERRO MESSAGE:', message);
+
+        return {
+          ok: false,
+          status: response.status,
+          data,
+          message,
+        };
+      }
+
+      const loggedUser = extractUserFromResponse(data);
+
+      if (!loggedUser) {
+        console.log(
+          '[AUTH] loginWithGoogle: usuário não encontrado na resposta',
+          data,
+        );
+
+        return {
+          ok: false,
+          reason: 'NO_USER_IN_RESPONSE',
+          data,
+          message:
+            'Login realizado, mas os dados do usuário não foram retornados.',
+        };
+      }
+
+      setUser(loggedUser);
+
+      console.log('[AUTH] loginWithGoogle OK:', loggedUser);
+
+      return {
+        ok: true,
+        user: loggedUser,
+        data,
+      };
+    } catch (err) {
+      console.log('[AUTH] loginWithGoogle EXCEPTION:', err);
+
+      return {
+        ok: false,
+        error: String(err),
+        message: String(err),
+      };
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [API_BASE]);
+
+  const logout = useCallback(async () => {
+    try {
+      await GoogleSignin.signOut();
+    } catch (_err) {}
+
     setUser(null);
   }, []);
 
@@ -328,6 +444,7 @@ export function AuthProvider({ children }) {
       isAuthenticated: !!user,
       isSyncing,
       login,
+      loginWithGoogle,
       logout,
       setUser,
       updateUser,
@@ -340,6 +457,7 @@ export function AuthProvider({ children }) {
       user,
       isSyncing,
       login,
+      loginWithGoogle,
       logout,
       updateUser,
       refreshUser,

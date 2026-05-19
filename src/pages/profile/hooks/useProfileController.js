@@ -5,6 +5,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 
 import { useAuth } from '../../../contexts/AuthContext';
+import { GoogleSignin } from '../../../services/googleAuth';
 
 import {
   buildSuccessMessage,
@@ -17,6 +18,7 @@ import {
   API_PUBLIC_URL,
   updateProfileDataRequest,
   updatePasswordRequest,
+  setPasswordRequest,
   uploadAvatarRequest,
   removeAvatarRequest,
   deleteAccountRequest,
@@ -29,6 +31,8 @@ function useProfileController({ defaultAvatar }) {
   const { user, updateUser } = auth;
 
   const isProfileReady = !!user;
+  const hasPassword = user?.hasPassword !== false;
+  const canDeleteWithGoogle = user?.authProvider === 'google';
 
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
@@ -170,7 +174,15 @@ function useProfileController({ defaultAvatar }) {
   }
 
   function wantsChangePassword() {
-    return currentPassword.trim() || newPassword.trim() || confirmPassword.trim();
+    if (hasPassword) {
+      return (
+        currentPassword.trim() ||
+        newPassword.trim() ||
+        confirmPassword.trim()
+      );
+    }
+
+    return newPassword.trim() || confirmPassword.trim();
   }
 
   function getChangedFields(changedPassword) {
@@ -179,7 +191,10 @@ function useProfileController({ defaultAvatar }) {
     if (hasChangedName()) fields.push('nome');
     if (hasChangedUsername()) fields.push('usuário');
     if (hasChangedEmail()) fields.push('e-mail');
-    if (changedPassword) fields.push('senha');
+
+    if (changedPassword) {
+      fields.push(hasPassword ? 'senha' : 'senha definida');
+    }
 
     return fields;
   }
@@ -230,23 +245,25 @@ function useProfileController({ defaultAvatar }) {
       return true;
     }
 
-    if (!currentPassword.trim()) {
+    if (hasPassword && !currentPassword.trim()) {
       setCurrentPasswordError('Informe sua senha atual.');
       return false;
     }
 
     if (!newPassword.trim()) {
-      setNewPasswordError('Informe a nova senha.');
+      setNewPasswordError(
+        hasPassword ? 'Informe a nova senha.' : 'Informe uma senha.',
+      );
       return false;
     }
 
     if (newPassword.length < 4) {
-      setNewPasswordError('A nova senha precisa ter pelo menos 4 caracteres.');
+      setNewPasswordError('A senha precisa ter pelo menos 4 caracteres.');
       return false;
     }
 
     if (!confirmPassword.trim()) {
-      setConfirmPasswordError('Confirme a nova senha.');
+      setConfirmPasswordError('Confirme a senha.');
       return false;
     }
 
@@ -298,6 +315,16 @@ function useProfileController({ defaultAvatar }) {
       return true;
     }
 
+    if (backendError?.code === 'PASSWORD_ALREADY_SET') {
+      setGeneralError('Essa conta já possui senha. Use a opção de alterar senha.');
+      return true;
+    }
+
+    if (backendError?.code === 'PASSWORD_NOT_SET') {
+      setGeneralError('Defina uma senha antes de usar essa ação.');
+      return true;
+    }
+
     return false;
   }
 
@@ -308,6 +335,26 @@ function useProfileController({ defaultAvatar }) {
       backendError?.code === 'PASSWORD_REQUIRED'
     ) {
       setDeleteAccountError('Senha atual incorreta.');
+      return true;
+    }
+
+    if (
+      backendError?.code === 'GOOGLE_ACCOUNT_USE_GOOGLE_DELETE' ||
+      backendError?.code === 'PASSWORD_OR_GOOGLE_REQUIRED'
+    ) {
+      setDeleteAccountError('Confirme a exclusão usando sua conta Google.');
+      return true;
+    }
+
+    if (backendError?.code === 'GOOGLE_ACCOUNT_MISMATCH') {
+      setDeleteAccountError(
+        'A conta Google selecionada não corresponde ao usuário logado.',
+      );
+      return true;
+    }
+
+    if (backendError?.code === 'INVALID_GOOGLE_TOKEN') {
+      setDeleteAccountError('Não foi possível confirmar sua conta Google.');
       return true;
     }
 
@@ -358,11 +405,22 @@ function useProfileController({ defaultAvatar }) {
 
   async function updatePassword() {
     try {
-      await updatePasswordRequest({
-        userId: user.id,
-        currentPassword,
-        newPassword,
-      });
+      if (hasPassword) {
+        await updatePasswordRequest({
+          userId: user.id,
+          currentPassword,
+          newPassword,
+        });
+      } else {
+        await setPasswordRequest({
+          userId: user.id,
+          newPassword,
+        });
+
+        syncAuthUser({
+          hasPassword: true,
+        });
+      }
 
       clearPasswordFields();
 
@@ -372,7 +430,7 @@ function useProfileController({ defaultAvatar }) {
         return false;
       }
 
-      throw new Error(backendError?.message || 'Erro ao alterar senha.');
+      throw new Error(backendError?.message || 'Erro ao salvar senha.');
     }
   }
 
@@ -525,7 +583,7 @@ function useProfileController({ defaultAvatar }) {
     }
   }
 
-  async function deleteAccount(password) {
+  async function deleteAccountWithPassword(password) {
     clearMessages();
     setDeleteAccountError('');
     setIsDeletingAccount(true);
@@ -556,6 +614,53 @@ function useProfileController({ defaultAvatar }) {
     }
   }
 
+  async function deleteAccountWithGoogle() {
+    clearMessages();
+    setDeleteAccountError('');
+    setIsDeletingAccount(true);
+
+    try {
+      await GoogleSignin.hasPlayServices({
+        showPlayServicesUpdateDialog: true,
+      });
+
+      try {
+        await GoogleSignin.signOut();
+      } catch (_err) {}
+
+      const googleUser = await GoogleSignin.signIn();
+      const googleIdToken = googleUser?.data?.idToken || googleUser?.idToken;
+
+      if (!googleIdToken) {
+        setDeleteAccountError('Não foi possível confirmar sua conta Google.');
+        return;
+      }
+
+      await deleteAccountRequest({
+        userId: user.id,
+        googleIdToken,
+      });
+
+      setShowDeleteAccountModal(false);
+
+      await clearAuthSession();
+      goToLogin();
+    } catch (backendError) {
+      console.log('ERRO AO EXCLUIR CONTA COM GOOGLE:', backendError);
+
+      if (handleDeleteAccountBackendError(backendError)) {
+        return;
+      }
+
+      setDeleteAccountError(
+        backendError?.message ||
+          'Não foi possível confirmar com Google. Tente novamente.',
+      );
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  }
+
   function handleDeleteAccount() {
     if (!user?.id || isDeletingAccount) return;
 
@@ -579,7 +684,16 @@ function useProfileController({ defaultAvatar }) {
 
     setDeleteAccountError('');
 
-    await deleteAccount(password);
+    await deleteAccountWithPassword(password);
+  }
+
+  async function handleConfirmDeleteAccountWithGoogle() {
+    if (!canDeleteWithGoogle) {
+      setDeleteAccountError('Essa conta não está vinculada ao Google.');
+      return;
+    }
+
+    await deleteAccountWithGoogle();
   }
 
   async function handleSaveChanges() {
@@ -628,6 +742,8 @@ function useProfileController({ defaultAvatar }) {
 
   return {
     isProfileReady,
+    hasPassword,
+    canDeleteWithGoogle,
 
     name,
     username,
@@ -699,6 +815,7 @@ function useProfileController({ defaultAvatar }) {
     handleDeleteAccount,
     handleCancelDeleteAccount,
     handleConfirmDeleteAccount,
+    handleConfirmDeleteAccountWithGoogle,
   };
 }
 

@@ -24,8 +24,11 @@ function DeleteAccountModal({
   visible,
   loading = false,
   error = '',
+  hasPassword = true,
+  canDeleteWithGoogle = false,
   onCancel,
   onConfirm,
+  onConfirmWithGoogle,
 }) {
   const [step, setStep] = useState('confirm');
   const [password, setPassword] = useState('');
@@ -56,6 +59,11 @@ function DeleteAccountModal({
   };
 
   const handleFirstConfirm = () => {
+    if (!hasPassword && canDeleteWithGoogle) {
+      if (onConfirmWithGoogle) onConfirmWithGoogle();
+      return;
+    }
+
     setStep('password');
   };
 
@@ -77,6 +85,24 @@ function DeleteAccountModal({
   const isPasswordStep = step === 'password';
   const visibleError = passwordError || error;
 
+  const title = isPasswordStep
+    ? 'Confirmar exclusão'
+    : 'Excluir conta';
+
+  const message = isPasswordStep
+    ? 'Para continuar, digite sua senha atual. Essa confirmação protege sua conta.'
+    : !hasPassword && canDeleteWithGoogle
+      ? 'Sua conta foi criada com Google. Para proteger sua conta, confirme novamente com Google antes de excluir.'
+      : 'Tem certeza que deseja excluir sua conta? Essa ação é permanente e não pode ser desfeita.';
+
+  const confirmLabel = loading
+    ? 'EXCLUINDO...'
+    : isPasswordStep
+      ? 'CONFIRMAR'
+      : !hasPassword && canDeleteWithGoogle
+        ? 'CONFIRMAR COM GOOGLE'
+        : 'EXCLUIR';
+
   return (
     <Modal
       visible={visible}
@@ -90,15 +116,9 @@ function DeleteAccountModal({
             <DeleteIconCircle>!</DeleteIconCircle>
           </DeleteIconWrapper>
 
-          <DeleteTitle>
-            {isPasswordStep ? 'Confirmar exclusão' : 'Excluir conta'}
-          </DeleteTitle>
+          <DeleteTitle>{title}</DeleteTitle>
 
-          <DeleteMessage>
-            {isPasswordStep
-              ? 'Para continuar, digite sua senha atual. Essa confirmação protege sua conta.'
-              : 'Tem certeza que deseja excluir sua conta? Essa ação é permanente e não pode ser desfeita.'}
-          </DeleteMessage>
+          <DeleteMessage>{message}</DeleteMessage>
 
           {isPasswordStep && (
             <>
@@ -122,6 +142,10 @@ function DeleteAccountModal({
             </>
           )}
 
+          {!isPasswordStep && !!visibleError && (
+            <FieldErrorText>{visibleError}</FieldErrorText>
+          )}
+
           <ButtonsRow>
             <CancelButton activeOpacity={0.85} onPress={handleCancel}>
               <CancelButtonText>CANCELAR</CancelButtonText>
@@ -132,13 +156,7 @@ function DeleteAccountModal({
               onPress={isPasswordStep ? handleFinalConfirm : handleFirstConfirm}
               disabled={loading}
             >
-              <ConfirmButtonText>
-                {loading
-                  ? 'EXCLUINDO...'
-                  : isPasswordStep
-                    ? 'CONFIRMAR'
-                    : 'EXCLUIR'}
-              </ConfirmButtonText>
+              <ConfirmButtonText>{confirmLabel}</ConfirmButtonText>
             </ConfirmButton>
           </ButtonsRow>
         </DeleteContainer>

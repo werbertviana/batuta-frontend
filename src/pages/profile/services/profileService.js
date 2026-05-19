@@ -21,6 +21,18 @@ function getBackendError(errorResponse) {
   return errorResponse?.error || errorResponse;
 }
 
+async function safeJson(response) {
+  const text = await response.text();
+
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
 export async function updateProfileDataRequest({
   userId,
   name,
@@ -68,7 +80,26 @@ export async function updatePasswordRequest({
     throw getBackendError(errorResponse);
   }
 
-  return response.json();
+  return safeJson(response);
+}
+
+export async function setPasswordRequest({ userId, newPassword }) {
+  const response = await fetch(`${API_BASE_URL}/users/${userId}/set-password`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      newPassword,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorResponse = await parseResponseError(response);
+    throw getBackendError(errorResponse);
+  }
+
+  return safeJson(response);
 }
 
 export async function uploadAvatarRequest({ userId, formData }) {
@@ -98,16 +129,24 @@ export async function removeAvatarRequest(userId) {
   return response.json();
 }
 
-export async function deleteAccountRequest({ userId, password }) {
+export async function deleteAccountRequest({
+  userId,
+  password,
+  googleIdToken,
+}) {
+  const body = googleIdToken
+    ? { googleIdToken }
+    : {
+        password,
+        currentPassword: password,
+      };
+
   const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      password,
-      currentPassword: password,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {

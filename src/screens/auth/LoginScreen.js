@@ -1,13 +1,19 @@
 // src/screens/auth/LoginScreen.js
-import React, { useState } from 'react';
-import { Platform, KeyboardAvoidingView, Alert } from 'react-native';
+
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Platform,
+  KeyboardAvoidingView,
+  Alert,
+  Animated,
+  Easing,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 
 import {
   Background,
-  Overlay,
-  Container,
+  LoginContainer,
   LogoContainer,
   LogoImage,
   Form,
@@ -17,25 +23,95 @@ import {
   StyledTextInput,
   ForgotPasswordText,
   ButtonsContainer,
+  GoogleButton,
+  GoogleIconCircle,
+  GoogleIconText,
+  GoogleButtonText,
+  DividerContainer,
+  DividerLine,
+  DividerText,
   PrimaryButton,
-  SecondaryButton,
   ButtonText,
+  CreateAccountRow,
+  CreateAccountText,
+  CreateAccountLink,
 } from './LoginStyles';
 
 import LogoBatuta from '../../assets/images/logo/logo.png';
 import LoginBackground from '../../assets/images/login/login-background.png';
 
 export default function LoginScreen() {
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigation = useNavigation();
+
+  const floatAnim = useRef(new Animated.Value(0)).current;
+
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const isBusy = loading || googleLoading;
 
   const API_BASE =
     Platform.OS === 'android'
       ? 'http://10.0.2.2:3000/api'
       : 'http://localhost:3000/api';
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, {
+          toValue: -5,
+          duration: 1450,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatAnim, {
+          toValue: 0,
+          duration: 1450,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    animation.start();
+
+    return () => {
+      animation.stop();
+    };
+  }, [floatAnim]);
+
+  const goToHome = () => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Tab' }],
+    });
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      setGoogleLoading(true);
+
+      const result = await loginWithGoogle();
+
+      if (!result?.ok) {
+        Alert.alert(
+          'Erro',
+          result?.message || 'Não foi possível entrar com Google.',
+        );
+        return;
+      }
+
+      goToHome();
+    } catch (err) {
+      console.log('GOOGLE LOGIN ERROR:', err);
+      Alert.alert('Erro', 'Não foi possível entrar com Google.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     if (!email.trim() || !senha.trim()) {
@@ -56,6 +132,7 @@ export default function LoginScreen() {
       });
 
       let data = null;
+
       try {
         data = await response.json();
       } catch (_e) {
@@ -69,25 +146,18 @@ export default function LoginScreen() {
 
         Alert.alert(
           'Erro',
-          backendCode ? `${backendMessage} (${backendCode})` : backendMessage
+          backendCode ? `${backendMessage} (${backendCode})` : backendMessage,
         );
         return;
       }
 
-      // { id, name, email, gameStats: { lifePoints, batutaPoints, xpPoints, elo, progressLevel } }
-      console.log('LOGIN OK (user):', data);
-
       login(data);
-
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Tab' }],
-      });
+      goToHome();
     } catch (err) {
       console.log('LOGIN ERROR:', err);
       Alert.alert(
         'Erro de rede',
-        'Não foi possível conectar ao servidor. Verifique a URL/porta e sua conexão.'
+        'Não foi possível conectar ao servidor. Verifique a URL/porta e sua conexão.',
       );
     } finally {
       setLoading(false);
@@ -108,56 +178,82 @@ export default function LoginScreen() {
         style={{ flex: 1, width: '100%', alignItems: 'center' }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <LogoContainer>
-          <LogoImage source={LogoBatuta} resizeMode="contain" />
-        </LogoContainer>
+        <LoginContainer>
+          <Animated.View style={{ transform: [{ translateY: floatAnim }] }}>
+            <LogoContainer>
+              <LogoImage source={LogoBatuta} resizeMode="contain" />
+            </LogoContainer>
+          </Animated.View>
 
-        <Form>
-          <InputWrapper>
-            <InputIconArea>
-              <InputIconText>✉️</InputIconText>
-            </InputIconArea>
+          <ButtonsContainer>
+            <GoogleButton onPress={handleGoogleLogin} disabled={isBusy}>
+              <GoogleIconCircle>
+                <GoogleIconText>G</GoogleIconText>
+              </GoogleIconCircle>
 
-            <StyledTextInput
-              placeholder="Email"
-              placeholderTextColor="#9a9a9a"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={email}
-              onChangeText={setEmail}
-              editable={!loading}
-            />
-          </InputWrapper>
+              <GoogleButtonText>
+                {googleLoading ? 'CONECTANDO...' : 'CONTINUAR COM GOOGLE'}
+              </GoogleButtonText>
+            </GoogleButton>
 
-          <InputWrapper style={{ marginTop: 20 }}>
-            <InputIconArea>
-              <InputIconText>🔒</InputIconText>
-            </InputIconArea>
+            <DividerContainer>
+              <DividerLine />
+              <DividerText>ou entre com email</DividerText>
+              <DividerLine />
+            </DividerContainer>
+          </ButtonsContainer>
 
-            <StyledTextInput
-              placeholder="Senha"
-              placeholderTextColor="#9a9a9a"
-              secureTextEntry
-              value={senha}
-              onChangeText={setSenha}
-              editable={!loading}
-            />
-          </InputWrapper>
+          <Form>
+            <InputWrapper>
+              <InputIconArea>
+                <InputIconText>✉️</InputIconText>
+              </InputIconArea>
 
-          <ForgotPasswordText onPress={handleForgotPassword}>
-            Esqueceu a senha?
-          </ForgotPasswordText>
-        </Form>
+              <StyledTextInput
+                placeholder="Email"
+                placeholderTextColor="#9a9a9a"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={email}
+                onChangeText={setEmail}
+                editable={!isBusy}
+              />
+            </InputWrapper>
 
-        <ButtonsContainer>
-          <PrimaryButton onPress={handleLogin} disabled={loading}>
-            <ButtonText>{loading ? 'ENTRANDO...' : 'ENTRAR'}</ButtonText>
-          </PrimaryButton>
+            <InputWrapper style={{ marginTop: 16 }}>
+              <InputIconArea>
+                <InputIconText>🔒</InputIconText>
+              </InputIconArea>
 
-          <SecondaryButton onPress={handleCreateAccount} disabled={loading}>
-            <ButtonText>CRIAR CONTA</ButtonText>
-          </SecondaryButton>
-        </ButtonsContainer>
+              <StyledTextInput
+                placeholder="Senha"
+                placeholderTextColor="#9a9a9a"
+                secureTextEntry
+                value={senha}
+                onChangeText={setSenha}
+                editable={!isBusy}
+              />
+            </InputWrapper>
+
+            <ForgotPasswordText onPress={handleForgotPassword}>
+              Esqueceu a senha?
+            </ForgotPasswordText>
+          </Form>
+
+          <ButtonsContainer>
+            <PrimaryButton onPress={handleLogin} disabled={isBusy}>
+              <ButtonText>{loading ? 'ENTRANDO...' : 'ENTRAR'}</ButtonText>
+            </PrimaryButton>
+
+            <CreateAccountRow>
+              <CreateAccountText>Ainda não tem conta?</CreateAccountText>
+              <CreateAccountLink onPress={handleCreateAccount}>
+                Criar com email
+              </CreateAccountLink>
+            </CreateAccountRow>
+          </ButtonsContainer>
+        </LoginContainer>
       </KeyboardAvoidingView>
     </Background>
   );

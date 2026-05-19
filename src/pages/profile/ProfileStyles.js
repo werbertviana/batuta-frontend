@@ -136,6 +136,15 @@ export const SectionTitle = styled.Text`
   color: ${teal};
 `;
 
+export const SecurityHintText = styled.Text`
+  font-size: ${Math.min(width * 0.038, 16)}px;
+  font-family: ${fonts.regular};
+  color: ${textGray};
+  line-height: 22px;
+  margin-top: -6px;
+  margin-bottom: 16px;
+`;
+
 export const Label = styled.Text`
   font-size: ${Math.min(width * 0.04, 17)}px;
   font-family: ${fonts.medium};

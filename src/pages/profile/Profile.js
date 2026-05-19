@@ -73,6 +73,7 @@ function Profile() {
 
           <ProfileSecuritySection
             iconSeguranca={iconSeguranca}
+            hasPassword={profile.hasPassword}
             currentPassword={profile.currentPassword}
             newPassword={profile.newPassword}
             confirmPassword={profile.confirmPassword}
@@ -134,8 +135,11 @@ function Profile() {
         visible={profile.showDeleteAccountModal}
         loading={profile.isDeletingAccount}
         error={profile.deleteAccountError}
+        hasPassword={profile.hasPassword}
+        canDeleteWithGoogle={profile.canDeleteWithGoogle}
         onCancel={profile.handleCancelDeleteAccount}
         onConfirm={profile.handleConfirmDeleteAccount}
+        onConfirmWithGoogle={profile.handleConfirmDeleteAccountWithGoogle}
       />
     </Container>
   );
