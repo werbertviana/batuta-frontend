@@ -31,6 +31,7 @@
     "react-native-safe-area-context": "5.1.0",
     "react-native-screens": "4.5.0",
     "react-native-sound": "0.11.2",
+    "react-native-url-polyfill": "^3.0.0",
     "react-native-vector-icons": "^10.3.0",
     "simple-swizzle": "0.2.4",
     "styled-components": "5.3.11"

@@ -8,6 +8,7 @@ import {
   Animated,
   Easing,
 } from 'react-native';
+import Feather from 'react-native-vector-icons/Feather';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -19,7 +20,6 @@ import {
   Form,
   InputWrapper,
   InputIconArea,
-  InputIconText,
   StyledTextInput,
   ForgotPasswordText,
   ButtonsContainer,
@@ -39,6 +39,8 @@ import {
 
 import LogoBatuta from '../../assets/images/logo/logo.png';
 import LoginBackground from '../../assets/images/login/login-background.png';
+
+const teal = '#2FAFC4';
 
 export default function LoginScreen() {
   const { login, loginWithGoogle } = useAuth();
@@ -87,6 +89,19 @@ export default function LoginScreen() {
     navigation.reset({
       index: 0,
       routes: [{ name: 'Tab' }],
+    });
+  };
+
+  const goToSignup = () => {
+    if (isBusy) return;
+    navigation.navigate('Signup');
+  };
+
+  const handleForgotPassword = () => {
+    if (isBusy) return;
+
+    navigation.navigate('ForgotPassword', {
+      email: email.trim(),
     });
   };
 
@@ -164,14 +179,6 @@ export default function LoginScreen() {
     }
   };
 
-  const handleCreateAccount = () => {
-    navigation.navigate('Signup');
-  };
-
-  const handleForgotPassword = () => {
-    console.log('Esqueceu a senha');
-  };
-
   return (
     <Background source={LoginBackground} resizeMode="cover">
       <KeyboardAvoidingView
@@ -206,7 +213,7 @@ export default function LoginScreen() {
           <Form>
             <InputWrapper>
               <InputIconArea>
-                <InputIconText>✉️</InputIconText>
+                <Feather name="mail" size={22} color={teal} />
               </InputIconArea>
 
               <StyledTextInput
@@ -223,7 +230,7 @@ export default function LoginScreen() {
 
             <InputWrapper style={{ marginTop: 16 }}>
               <InputIconArea>
-                <InputIconText>🔒</InputIconText>
+                <Feather name="lock" size={22} color={teal} />
               </InputIconArea>
 
               <StyledTextInput
@@ -248,7 +255,8 @@ export default function LoginScreen() {
 
             <CreateAccountRow>
               <CreateAccountText>Ainda não tem conta?</CreateAccountText>
-              <CreateAccountLink onPress={handleCreateAccount}>
+
+              <CreateAccountLink onPress={goToSignup}>
                 Criar com email
               </CreateAccountLink>
             </CreateAccountRow>

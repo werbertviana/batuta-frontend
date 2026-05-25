@@ -1,4 +1,4 @@
-// src/screens/auth/LoginStyles.js
+// src/screens/auth/SignupStyles.js
 
 import styled from 'styled-components/native';
 import { Dimensions } from 'react-native';
@@ -13,7 +13,7 @@ export const Background = styled.ImageBackground`
   align-items: center;
 `;
 
-export const LoginContainer = styled.View`
+export const SignupContainer = styled.View`
   flex: 1;
   width: 100%;
   align-items: center;
@@ -25,17 +25,57 @@ export const LoginContainer = styled.View`
 export const LogoContainer = styled.View`
   align-items: center;
   justify-content: center;
-  margin-bottom: ${Math.max(height * 0.018, 14)}px;
+  margin-bottom: 10px;
 `;
 
 export const LogoImage = styled.Image`
-  width: ${Math.min(width * 0.43, 170)}px;
-  height: ${Math.min(width * 0.43, 170)}px;
+  width: ${Math.min(width * 0.34, 140)}px;
+  height: ${Math.min(width * 0.34, 140)}px;
+`;
+
+export const Subtitle = styled.Text`
+  width: ${contentWidth};
+  text-align: center;
+  font-family: 'GothamCondensed-Book';
+  font-size: ${Math.min(width * 0.05, 20)}px;
+  line-height: ${Math.min(width * 0.06, 24)}px;
+  color: #5b5b5b;
+  margin-top: 4px;
+  margin-bottom: 18px;
+`;
+
+export const SuccessBox = styled.View`
+  width: ${contentWidth};
+  min-height: 46px;
+  background-color: #e8f8ec;
+  border-width: 1.5px;
+  border-color: #34b85a;
+  border-radius: 14px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding-horizontal: 14px;
+  margin-bottom: 14px;
+`;
+
+export const SuccessIconCircle = styled.View`
+  width: 26px;
+  height: 26px;
+  border-radius: 13px;
+  background-color: #34b85a;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+`;
+
+export const SuccessText = styled.Text`
+  font-family: 'GothamCondensed-Medium';
+  font-size: ${Math.min(width * 0.046, 18)}px;
+  color: #1f7d3b;
 `;
 
 export const Form = styled.View`
   width: ${contentWidth};
-  margin-top: 2px;
 `;
 
 export const InputWrapper = styled.View`
@@ -45,7 +85,7 @@ export const InputWrapper = styled.View`
   border-radius: 14px;
   height: ${Math.min(height * 0.062, 52)}px;
   border-bottom-width: 3px;
-  border-color: #d4d6d6;
+  border-color: ${({ hasError }) => (hasError ? '#ff3b3b' : '#d4d6d6')};
   border-left-width: 0.5px;
   border-right-width: 0.5px;
 `;
@@ -66,78 +106,19 @@ export const StyledTextInput = styled.TextInput`
   padding-right: 14px;
 `;
 
-export const ForgotPasswordText = styled.Text`
-  align-self: flex-end;
-  margin-top: 10px;
-  font-size: ${Math.min(width * 0.052, 21)}px;
-  color: #236a79;
+export const FieldErrorText = styled.Text`
   font-family: 'GothamCondensed-Medium';
+  font-size: ${Math.min(width * 0.042, 16)}px;
+  color: #ff3b3b;
+  margin-top: 5px;
+  margin-bottom: -3px;
+  padding-left: 4px;
 `;
 
 export const ButtonsContainer = styled.View`
   align-items: center;
   justify-content: center;
   width: ${contentWidth};
-`;
-
-export const GoogleButton = styled.TouchableOpacity`
-  width: 100%;
-  min-height: ${Math.min(height * 0.068, 58)}px;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  border-radius: 14px;
-  background-color: #ffffff;
-  border-width: 1px;
-  border-color: #d9d9d9;
-  border-bottom-width: 4px;
-  margin-bottom: 16px;
-  opacity: ${({ disabled }) => (disabled ? 0.65 : 1)};
-`;
-
-export const GoogleIconCircle = styled.View`
-  width: 34px;
-  height: 34px;
-  border-radius: 17px;
-  align-items: center;
-  justify-content: center;
-  background-color: #ffffff;
-  border-width: 1px;
-  border-color: #e5e5e5;
-  margin-right: 10px;
-`;
-
-export const GoogleIconText = styled.Text`
-  font-size: 21px;
-  color: #4285f4;
-  font-weight: bold;
-`;
-
-export const GoogleButtonText = styled.Text`
-  font-family: 'GothamCondensed-Medium';
-  font-size: ${Math.min(width * 0.058, 24)}px;
-  color: #222222;
-  letter-spacing: 0.8px;
-`;
-
-export const DividerContainer = styled.View`
-  width: 100%;
-  flex-direction: row;
-  align-items: center;
-  margin-bottom: 16px;
-`;
-
-export const DividerLine = styled.View`
-  flex: 1;
-  height: 1px;
-  background-color: rgba(0, 0, 0, 0.18);
-`;
-
-export const DividerText = styled.Text`
-  margin: 0 10px;
-  font-size: ${Math.min(width * 0.046, 18)}px;
-  color: #333333;
-  font-family: 'GothamCondensed-Medium';
 `;
 
 export const PrimaryButton = styled.TouchableOpacity`
@@ -149,8 +130,8 @@ export const PrimaryButton = styled.TouchableOpacity`
   background-color: #3cb1c7;
   border-bottom-width: 4px;
   border-color: #236a79;
-  margin-top: 24px;
-  margin-bottom: 16px;
+  margin-top: 26px;
+  margin-bottom: 18px;
   opacity: ${({ disabled }) => (disabled ? 0.65 : 1)};
   border-left-width: 0.5px;
   border-right-width: 0.5px;
@@ -158,25 +139,24 @@ export const PrimaryButton = styled.TouchableOpacity`
 
 export const ButtonText = styled.Text`
   font-family: 'GothamCondensed-Medium';
-  font-size: ${Math.min(width * 0.078, 30)}px;
+  font-size: ${Math.min(width * 0.074, 28)}px;
   color: #ffffff;
   letter-spacing: 1px;
 `;
 
-export const CreateAccountRow = styled.View`
+export const LoginRow = styled.View`
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  margin-top: 2px;
 `;
 
-export const CreateAccountText = styled.Text`
+export const LoginText = styled.Text`
   font-family: 'GothamCondensed-Medium';
   font-size: ${Math.min(width * 0.051, 20)}px;
   color: #222222;
 `;
 
-export const CreateAccountLink = styled.Text`
+export const LoginLink = styled.Text`
   font-family: 'GothamCondensed-Medium';
   font-size: ${Math.min(width * 0.053, 21)}px;
   color: #236a79;
