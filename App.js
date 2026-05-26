@@ -4,20 +4,21 @@ import 'react-native-url-polyfill/auto';
 import './src/shims/backHandler';
 
 import React from 'react';
-
 import { NavigationContainer } from '@react-navigation/native';
 
 import Navigation from './src/navigation/StackNavigation';
 import { AuthProvider } from './src/contexts/AuthContext';
 
 const linking = {
-  prefixes: ['batuta://'],
+  prefixes: [
+    'batuta://',
+    'https://batuta.app',
+  ],
 
   config: {
     screens: {
       ResetPassword: {
         path: 'reset-password',
-
         parse: {
           token: token => `${token}`,
         },

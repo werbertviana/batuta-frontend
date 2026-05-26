@@ -50,48 +50,68 @@ function StackNavigation() {
   return (
     <Stack.Navigator
       initialRouteName="Login"
-      screenOptions={{ headerShown: false }}
+      screenOptions={{
+        headerShown: false,
+      }}
     >
       {/* Auth */}
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Signup" component={SignupScreen} />
-      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-      <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+      <Stack.Group>
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Signup" component={SignupScreen} />
+        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+
+        {/* Importante: esse nome precisa bater com o linking do App.js */}
+        <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+      </Stack.Group>
 
       {/* Home / Tabs */}
-      <Stack.Screen name="Tab" component={TabNavigation} />
-      <Stack.Screen name="Home" component={Home} />
+      <Stack.Group>
+        <Stack.Screen name="Tab" component={TabNavigation} />
+        <Stack.Screen name="Home" component={Home} />
+      </Stack.Group>
 
       {/* Conteúdos Lição 01 */}
-      <Stack.Screen name="Introdução" component={Introducao} />
-      <Stack.Screen name="Pauta Musical" component={Pauta} />
-      <Stack.Screen name="Notas Musicais" component={Notas} />
-      <Stack.Screen name="Clave Musical" component={Clave} />
+      <Stack.Group>
+        <Stack.Screen name="Introdução" component={Introducao} />
+        <Stack.Screen name="Pauta Musical" component={Pauta} />
+        <Stack.Screen name="Notas Musicais" component={Notas} />
+        <Stack.Screen name="Clave Musical" component={Clave} />
+      </Stack.Group>
 
       {/* Conteúdos Lição 02 */}
-      <Stack.Screen name="Figuras de Notas" component={FigurasNotas} />
-      <Stack.Screen name="Figuras de Pausas" component={FigurasPausas} />
-      <Stack.Screen name="Duração dos Valores" component={DuracaoValores} />
-      <Stack.Screen name="Compasso Musical" component={Compasso} />
+      <Stack.Group>
+        <Stack.Screen name="Figuras de Notas" component={FigurasNotas} />
+        <Stack.Screen name="Figuras de Pausas" component={FigurasPausas} />
+        <Stack.Screen name="Duração dos Valores" component={DuracaoValores} />
+        <Stack.Screen name="Compasso Musical" component={Compasso} />
+      </Stack.Group>
 
       {/* Bônus */}
-      <Stack.Screen name="BonusClave" component={BonusClave} />
+      <Stack.Group>
+        <Stack.Screen name="BonusClave" component={BonusClave} />
+      </Stack.Group>
 
       {/* Atividades Lição 01 */}
-      <Stack.Screen name="AtivIntro" component={AtivIntro} />
-      <Stack.Screen name="AtivPauta" component={AtivPauta} />
-      <Stack.Screen name="AtivNotas" component={AtivNotas} />
-      <Stack.Screen name="AtivClave" component={AtivClave} />
+      <Stack.Group>
+        <Stack.Screen name="AtivIntro" component={AtivIntro} />
+        <Stack.Screen name="AtivPauta" component={AtivPauta} />
+        <Stack.Screen name="AtivNotas" component={AtivNotas} />
+        <Stack.Screen name="AtivClave" component={AtivClave} />
+      </Stack.Group>
 
       {/* Atividades Lição 02 */}
-      <Stack.Screen name="AtivFigNotas" component={AtivFigNotas} />
-      <Stack.Screen name="AtivFigPausas" component={AtivFigPausas} />
-      <Stack.Screen name="AtivCompasso" component={AtivCompasso} />
-      <Stack.Screen name="AtivDuracao" component={AtivDuracao} />
+      <Stack.Group>
+        <Stack.Screen name="AtivFigNotas" component={AtivFigNotas} />
+        <Stack.Screen name="AtivFigPausas" component={AtivFigPausas} />
+        <Stack.Screen name="AtivCompasso" component={AtivCompasso} />
+        <Stack.Screen name="AtivDuracao" component={AtivDuracao} />
+      </Stack.Group>
 
       {/* Resultado */}
-      <Stack.Screen name="ResumoAtividade" component={ResumoAtividade} />
-      <Stack.Screen name="GameOver" component={GameOver} />
+      <Stack.Group>
+        <Stack.Screen name="ResumoAtividade" component={ResumoAtividade} />
+        <Stack.Screen name="GameOver" component={GameOver} />
+      </Stack.Group>
     </Stack.Navigator>
   );
 }

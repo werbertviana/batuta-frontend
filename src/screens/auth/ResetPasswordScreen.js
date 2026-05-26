@@ -43,6 +43,16 @@ function getTokenFromRoute(route) {
   return route?.params?.token || route?.params?.params?.token || '';
 }
 
+function getBackendError(data) {
+  return {
+    code: data?.error?.code || data?.code || '',
+    message:
+      data?.error?.message ||
+      data?.message ||
+      'Não foi possível redefinir a senha.',
+  };
+}
+
 export default function ResetPasswordScreen() {
   const navigation = useNavigation();
   const route = useRoute();
@@ -152,9 +162,31 @@ export default function ResetPasswordScreen() {
     return true;
   }
 
+  function handleApiError(code, message) {
+    if (code === 'INVALID_OR_EXPIRED_RESET_TOKEN') {
+      const tokenMessage =
+        'Token inválido ou expirado. Solicite uma nova recuperação.';
+
+      if (shouldShowTokenField) {
+        setTokenError(tokenMessage);
+      } else {
+        setGeneralError(tokenMessage);
+      }
+
+      return;
+    }
+
+    if (code === 'SAME_PASSWORD') {
+      setNewPasswordError('A nova senha não pode ser igual à senha atual.');
+      setGeneralError('Escolha uma senha diferente da atual.');
+      return;
+    }
+
+    setGeneralError(message);
+  }
+
   async function handleResetPassword() {
-    setSuccessMessage('');
-    setGeneralError('');
+    clearMessages();
 
     if (!validateForm()) return;
 
@@ -179,28 +211,16 @@ export default function ResetPasswordScreen() {
       }
 
       if (!response.ok) {
-        const code = data?.error?.code;
-        const message =
-          data?.error?.message || 'Não foi possível redefinir a senha.';
+        const { code, message } = getBackendError(data);
 
-        if (code === 'INVALID_OR_EXPIRED_RESET_TOKEN') {
-          const tokenMessage =
-            'Token inválido ou expirado. Solicite uma nova recuperação.';
-
-          if (shouldShowTokenField) {
-            setTokenError(tokenMessage);
-          } else {
-            setGeneralError(tokenMessage);
-          }
-
-          return;
-        }
-
-        setGeneralError(message);
+        handleApiError(code, message);
         return;
       }
 
       setSuccessMessage('Senha redefinida com sucesso! Redirecionando...');
+
+      setNewPassword('');
+      setConfirmPassword('');
 
       setTimeout(() => {
         navigation.reset({

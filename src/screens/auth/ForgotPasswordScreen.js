@@ -23,8 +23,12 @@ import {
   StyledTextInput,
   FieldErrorText,
   SuccessBox,
-  SuccessIconCircle,
+  SuccessIconImage,
   SuccessText,
+  SuccessDivider,
+  SuccessDividerLine,
+  SuccessDividerDot,
+  SuccessEmail,
   PrimaryButton,
   ButtonText,
   LoginRow,
@@ -34,6 +38,7 @@ import {
 
 import LogoBatuta from '../../assets/images/logo/logo.png';
 import LoginBackground from '../../assets/images/login/login-background.png';
+import CheckSuccessImage from '../../assets/images/forgot/check.png';
 
 const teal = '#2FAFC4';
 
@@ -50,7 +55,6 @@ export default function ForgotPasswordScreen() {
   const route = useRoute();
 
   const floatAnim = useRef(new Animated.Value(0)).current;
-
   const initialEmail = route?.params?.email || '';
 
   const [email, setEmail] = useState(initialEmail);
@@ -108,6 +112,7 @@ export default function ForgotPasswordScreen() {
   async function handleSendRecoveryEmail() {
     setEmailError('');
     setSuccessMessage('');
+    setSentEmail('');
 
     if (!validateEmail()) return;
 
@@ -147,8 +152,9 @@ export default function ForgotPasswordScreen() {
       }
 
       setSentEmail(normalizedEmail);
+
       setSuccessMessage(
-        'Enviamos um link de redefinição. Verifique sua caixa de entrada e também o spam.',
+        'Enviamos um link de redefinição.\nVerifique sua caixa de entrada\ne também o spam.',
       );
     } catch (err) {
       console.log('FORGOT PASSWORD ERROR:', err);
@@ -181,14 +187,17 @@ export default function ForgotPasswordScreen() {
 
           {!!successMessage && (
             <SuccessBox>
-              <SuccessIconCircle>
-                <Feather name="check" size={18} color="#ffffff" />
-              </SuccessIconCircle>
+              <SuccessIconImage source={CheckSuccessImage} resizeMode="contain" />
 
-              <SuccessText>
-                {successMessage}
-                {!!sentEmail ? `\n${sentEmail}` : ''}
-              </SuccessText>
+              <SuccessText>{successMessage}</SuccessText>
+
+              <SuccessDivider>
+                <SuccessDividerLine />
+                <SuccessDividerDot />
+                <SuccessDividerLine />
+              </SuccessDivider>
+
+              {!!sentEmail && <SuccessEmail>{sentEmail}</SuccessEmail>}
             </SuccessBox>
           )}
 

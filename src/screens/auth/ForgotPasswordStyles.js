@@ -46,35 +46,58 @@ export const Subtitle = styled.Text`
 
 export const SuccessBox = styled.View`
   width: ${contentWidth};
-  min-height: 52px;
+  min-height: ${Math.min(height * 0.18, 150)}px;
   background-color: #e8f8ec;
-  border-width: 1.5px;
-  border-color: #34b85a;
-  border-radius: 14px;
-  flex-direction: row;
+  border-width: 2px;
+  border-color: #239f43;
+  border-radius: 18px;
   align-items: center;
   justify-content: center;
-  padding-horizontal: 14px;
-  padding-vertical: 8px;
-  margin-bottom: 14px;
-`;
-
-export const SuccessIconCircle = styled.View`
-  width: 26px;
-  height: 26px;
-  border-radius: 13px;
-  background-color: #34b85a;
-  align-items: center;
-  justify-content: center;
-  margin-right: 8px;
+  padding-horizontal: 18px;
+  padding-vertical: 16px;
+  margin-bottom: 24px;
 `;
 
 export const SuccessText = styled.Text`
-  flex: 1;
+  width: 100%;
+  text-align: center;
   font-family: 'GothamCondensed-Medium';
-  font-size: ${Math.min(width * 0.043, 17)}px;
-  line-height: ${Math.min(width * 0.052, 21)}px;
+  font-size: ${Math.min(width * 0.052, 21)}px;
+  line-height: ${Math.min(width * 0.064, 25)}px;
   color: #1f7d3b;
+`;
+
+export const SuccessDivider = styled.View`
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12px;
+  margin-bottom: 6px;
+`;
+
+export const SuccessDividerLine = styled.View`
+  width: 38px;
+  height: 3px;
+  border-radius: 3px;
+  background-color: #34b85a;
+`;
+
+export const SuccessDividerDot = styled.View`
+  width: 7px;
+  height: 7px;
+  border-radius: 3.5px;
+  background-color: #34b85a;
+  margin-horizontal: 8px;
+`;
+
+export const SuccessEmail = styled.Text`
+  width: 100%;
+  text-align: center;
+  font-family: 'GothamCondensed-Medium';
+  font-size: ${Math.min(width * 0.047, 18)}px;
+  line-height: ${Math.min(width * 0.056, 22)}px;
+  color: #222222;
+  margin-top: 8px;
 `;
 
 export const Form = styled.View`
@@ -158,4 +181,10 @@ export const LoginLink = styled.Text`
   font-size: ${Math.min(width * 0.053, 21)}px;
   color: #236a79;
   margin-left: 6px;
+`;
+
+export const SuccessIconImage = styled.Image`
+  width: ${Math.min(width * 0.35, 210)}px;
+  height: ${Math.min(width * 0.16, 80)}px;
+  margin-bottom: 10px;
 `;
