@@ -184,7 +184,7 @@ export const LoginLink = styled.Text`
 `;
 
 export const SuccessIconImage = styled.Image`
-  width: ${Math.min(width * 0.35, 210)}px;
+  width: ${Math.min(width * 0.32, 210)}px;
   height: ${Math.min(width * 0.16, 80)}px;
   margin-bottom: 10px;
 `;
