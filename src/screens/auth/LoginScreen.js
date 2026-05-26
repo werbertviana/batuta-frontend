@@ -7,6 +7,7 @@ import {
   Alert,
   Animated,
   Easing,
+  Image,
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { useNavigation } from '@react-navigation/native';
@@ -25,7 +26,6 @@ import {
   ButtonsContainer,
   GoogleButton,
   GoogleIconCircle,
-  GoogleIconText,
   GoogleButtonText,
   DividerContainer,
   DividerLine,
@@ -39,6 +39,7 @@ import {
 
 import LogoBatuta from '../../assets/images/logo/logo.png';
 import LoginBackground from '../../assets/images/login/login-background.png';
+import GoogleIcon from '../../assets/images/login/google.png';
 
 const teal = '#2FAFC4';
 
@@ -195,7 +196,14 @@ export default function LoginScreen() {
           <ButtonsContainer>
             <GoogleButton onPress={handleGoogleLogin} disabled={isBusy}>
               <GoogleIconCircle>
-                <GoogleIconText>G</GoogleIconText>
+                <Image
+                  source={GoogleIcon}
+                  resizeMode="contain"
+                  style={{
+                    width: 22,
+                    height: 22,
+                  }}
+                />
               </GoogleIconCircle>
 
               <GoogleButtonText>
