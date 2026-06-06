@@ -64,12 +64,12 @@ function Introducao() {
   const [isLoadingSlides, setIsLoadingSlides] = useState(true);
 
   const normalImageStyle = {
-    width: width * 0.95,
+    width: width * 0.92,
     height: height * 0.55,
   };
 
   const audioImageStyle = {
-    width: width * 0.95,
+    width: width * 0.92,
     height: height * 0.5,
   };
 
@@ -264,12 +264,20 @@ function Introducao() {
       data={slides}
       style={{ backgroundColor: '#FFF' }}
       activeDotStyle={{
-        marginTop: '6%',
-        backgroundColor: '#96989A',
+        marginTop: '5%',
+        backgroundColor: '#2FAFC4',
+        width: 16,
+        height: 16,
+        borderRadius: 20,
+        marginHorizontal: 5
       }}
       dotStyle={{
-        marginTop: '6%',
-        backgroundColor: '#D2D3D5',
+        marginTop: '5%',
+        backgroundColor: '#D4D5D6',
+        width: 14,
+        height: 14,
+        borderRadius: 20,
+        marginHorizontal: 5
       }}
       showSkipButton
       showPrevButton

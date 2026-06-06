@@ -9,6 +9,9 @@ import SignupScreen from '../screens/auth/SignupScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 
+// Tutorial / Onboarding
+import TutorialScreen from '../screens/tutorial/TutorialScreen';
+
 // Home / Tabs
 import Home from '../pages/home/Home';
 import TabNavigation from './TabNavigation';
@@ -62,6 +65,11 @@ function StackNavigation() {
 
         {/* Importante: esse nome precisa bater com o linking do App.js */}
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+      </Stack.Group>
+
+      {/* Tutorial / Onboarding */}
+      <Stack.Group>
+        <Stack.Screen name="Tutorial" component={TutorialScreen} />
       </Stack.Group>
 
       {/* Home / Tabs */}

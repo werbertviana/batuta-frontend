@@ -27,45 +27,6 @@ export const SlideView = styled.SafeAreaView`
     justify-content: center;
 `;
 
-export const FlatView = styled.SafeAreaView`
-    width: 100%;
-    align-items: center;
-    justify-content: center;
-`;
-
-export const SlideView2 = styled.SafeAreaView`
-    width: 100%;
-    height: 55%;
-    align-items: center;
-    justify-content: center;
-`;
-
-export const SlideView3 = styled.SafeAreaView`
-    height: 90px;
-    width: 100%;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-around;
-`;
-
-export const Div = styled.SafeAreaView`
-    width: 100%;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    padding-left: 12px;
-    padding-right: 12px;
-`;
-
-export const DivisorLine2 = styled.SafeAreaView`
-    width: 100%;
-    height: 2px;
-    background-color: #D2D3D5;
-    border-radius: 5px;
-    align-items: center;
-    justify-content: center;
-`;
-
 export const TouchableHeader = styled.TouchableOpacity`
     position: absolute;
     left: 3%;
@@ -80,13 +41,4 @@ export const ImageIcon = styled(FastImage)`
 export const ImageTitle = styled(FastImage)`
     width: 225px;
     height: 80px;
-`;
-
-export const ImageSound = styled(FastImage)`
-    width: 40px;
-    height: 40px;
-    margin-top: 2px;
-    margin-bottom: 2px;
-    margin-left: 10px;
-    margin-right: 10px;
 `;

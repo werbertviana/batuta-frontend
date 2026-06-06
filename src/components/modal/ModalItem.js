@@ -2,6 +2,8 @@ import React from 'react';
 import { TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
+import { useAuth } from '../../contexts/AuthContext';
+
 import {
   ModalContainer,
   ContentView,
@@ -45,10 +47,11 @@ const practiceRouteMap = {
   'Compasso Musical': 'AtivCompasso',
 };
 
-const getIcon = (title) => iconMap[title] || iconMap.Introdução;
+const getIcon = title => iconMap[title] || iconMap.Introdução;
 
 function ModalItem({ onClose, title, practiceRoute, content }) {
   const navigation = useNavigation();
+  const { hasSeenTutorial } = useAuth();
 
   const handleContentPress = () => {
     onClose();
@@ -57,6 +60,17 @@ function ModalItem({ onClose, title, practiceRoute, content }) {
     const routeName = contentRouteMap[contentKey] || title;
 
     if (!routeName) return;
+
+    if (!hasSeenTutorial('content')) {
+      navigation.navigate('Tutorial', {
+        tutorialKey: 'content',
+        returnTo: routeName,
+        returnParams: { content: contentKey },
+        resetAfterFinish: false,
+      });
+
+      return;
+    }
 
     navigation.navigate(routeName, { content: contentKey });
   };
@@ -67,6 +81,16 @@ function ModalItem({ onClose, title, practiceRoute, content }) {
     const routeName = practiceRoute || practiceRouteMap[title];
 
     if (!routeName) return;
+
+    if (!hasSeenTutorial('activity')) {
+      navigation.navigate('Tutorial', {
+        tutorialKey: 'activity',
+        returnTo: routeName,
+        resetAfterFinish: false,
+      });
+
+      return;
+    }
 
     navigation.navigate(routeName);
   };

@@ -88,10 +88,10 @@ const FeedItem = ({
       <Modal
         isVisible={modalVisible}
         onBackdropPress={() => setModalVisible(false)}
-        backdropColor="white"
+        backdropColor="#000"
         animationIn="fadeInUp"
         animationOut="fadeOutDown"
-        backdropOpacity={0.7}
+        backdropOpacity={0.45}
         style={{ alignItems: 'center' }}
       >
         <ModalItem

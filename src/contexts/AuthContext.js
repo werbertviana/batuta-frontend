@@ -10,12 +10,37 @@ import { GoogleSignin } from '../services/googleAuth';
 
 const AuthContext = createContext(null);
 
+const DEFAULT_TUTORIALS_SEEN = {
+  intro: false,
+  content: false,
+  activity: false,
+  rewards: false,
+  profile: false,
+  elos: false,
+};
+
 async function safeParseJson(response) {
   try {
     return await response.json();
   } catch (_e) {
     return null;
   }
+}
+
+function normalizeTutorialsSeen(tutorialsSeen) {
+  return {
+    ...DEFAULT_TUTORIALS_SEEN,
+    ...(tutorialsSeen || {}),
+  };
+}
+
+function normalizeUser(userData) {
+  if (!userData) return null;
+
+  return {
+    ...userData,
+    tutorialsSeen: normalizeTutorialsSeen(userData.tutorialsSeen),
+  };
 }
 
 function buildActivityPayload({
@@ -37,12 +62,14 @@ function buildActivityPayload({
 function extractUserFromResponse(data) {
   if (!data) return null;
 
-  if (data.user) return data.user;
-  if (data.updatedUser) return data.updatedUser;
-  if (data.data?.user) return data.data.user;
-  if (data.data?.updatedUser) return data.data.updatedUser;
+  if (data.user) return normalizeUser(data.user);
+  if (data.updatedUser) return normalizeUser(data.updatedUser);
+  if (data.data?.user) return normalizeUser(data.data.user);
+  if (data.data?.updatedUser) return normalizeUser(data.data.updatedUser);
 
-  if (data.id || data.email || data.elo || data.gameStats) return data;
+  if (data.id || data.email || data.elo || data.gameStats || data.tutorialsSeen) {
+    return normalizeUser(data);
+  }
 
   return null;
 }
@@ -63,6 +90,10 @@ function extractUserPatchFromResponse(data) {
   if (data.lifePoints !== undefined) patch.lifePoints = data.lifePoints;
   if (data.gameStats) patch.gameStats = data.gameStats;
 
+  if (data.tutorialsSeen) {
+    patch.tutorialsSeen = normalizeTutorialsSeen(data.tutorialsSeen);
+  }
+
   if (reward?.newElo) patch.elo = reward.newElo;
   if (reward?.elo) patch.elo = reward.elo;
   if (reward?.xp !== undefined) patch.xp = reward.xp;
@@ -73,7 +104,10 @@ function extractUserPatchFromResponse(data) {
   return Object.keys(patch).length > 0 ? patch : null;
 }
 
-function getBackendErrorMessage(data, fallback = 'Erro ao fazer login com Google.') {
+function getBackendErrorMessage(
+  data,
+  fallback = 'Erro ao fazer login com Google.',
+) {
   const backendMessage =
     data?.error?.message ||
     data?.message ||
@@ -97,14 +131,12 @@ export function AuthProvider({ children }) {
       : 'http://localhost:3000/api';
 
   const login = useCallback(userData => {
-    setUser(userData);
+    setUser(normalizeUser(userData));
   }, []);
 
   const loginWithGoogle = useCallback(async () => {
     try {
       setIsSyncing(true);
-
-      console.log('[AUTH] loginWithGoogle: iniciando');
 
       await GoogleSignin.hasPlayServices({
         showPlayServicesUpdateDialog: true,
@@ -112,13 +144,9 @@ export function AuthProvider({ children }) {
 
       try {
         await GoogleSignin.signOut();
-      } catch (signOutErr) {
-        console.log('[AUTH] loginWithGoogle signOut ignorado:', signOutErr);
-      }
+      } catch (_err) {}
 
       const googleUser = await GoogleSignin.signIn();
-
-      console.log('[AUTH] loginWithGoogle googleUser:', googleUser);
 
       const idToken =
         googleUser?.data?.idToken ||
@@ -126,8 +154,6 @@ export function AuthProvider({ children }) {
         googleUser?.serverAuthCode;
 
       if (!idToken) {
-        console.log('[AUTH] loginWithGoogle: idToken não encontrado', googleUser);
-
         return {
           ok: false,
           reason: 'NO_GOOGLE_ID_TOKEN',
@@ -135,8 +161,6 @@ export function AuthProvider({ children }) {
           data: googleUser,
         };
       }
-
-      console.log('[AUTH] loginWithGoogle: enviando token para backend');
 
       const response = await fetch(`${API_BASE}/auth/google`, {
         method: 'POST',
@@ -147,28 +171,17 @@ export function AuthProvider({ children }) {
       const data = await safeParseJson(response);
 
       if (!response.ok) {
-        const message = getBackendErrorMessage(data);
-
-        console.log('[AUTH] loginWithGoogle ERRO STATUS:', response.status);
-        console.log('[AUTH] loginWithGoogle ERRO DATA:', data);
-        console.log('[AUTH] loginWithGoogle ERRO MESSAGE:', message);
-
         return {
           ok: false,
           status: response.status,
           data,
-          message,
+          message: getBackendErrorMessage(data),
         };
       }
 
       const loggedUser = extractUserFromResponse(data);
 
       if (!loggedUser) {
-        console.log(
-          '[AUTH] loginWithGoogle: usuário não encontrado na resposta',
-          data,
-        );
-
         return {
           ok: false,
           reason: 'NO_USER_IN_RESPONSE',
@@ -180,16 +193,12 @@ export function AuthProvider({ children }) {
 
       setUser(loggedUser);
 
-      console.log('[AUTH] loginWithGoogle OK:', loggedUser);
-
       return {
         ok: true,
         user: loggedUser,
         data,
       };
     } catch (err) {
-      console.log('[AUTH] loginWithGoogle EXCEPTION:', err);
-
       return {
         ok: false,
         error: String(err),
@@ -209,10 +218,12 @@ export function AuthProvider({ children }) {
   }, []);
 
   const updateUser = useCallback(userData => {
-    setUser(currentUser => ({
-      ...(currentUser || {}),
-      ...(userData || {}),
-    }));
+    setUser(currentUser =>
+      normalizeUser({
+        ...(currentUser || {}),
+        ...(userData || {}),
+      }),
+    );
   }, []);
 
   const mergeUserFromResponse = useCallback((data, fallbackPatch = {}) => {
@@ -230,10 +241,10 @@ export function AuthProvider({ children }) {
     let nextUser = null;
 
     setUser(currentUser => {
-      nextUser = {
+      nextUser = normalizeUser({
         ...(currentUser || {}),
         ...nextPatch,
-      };
+      });
 
       return nextUser;
     });
@@ -243,7 +254,6 @@ export function AuthProvider({ children }) {
 
   const refreshUser = useCallback(async () => {
     if (!user?.id) {
-      console.log('[AUTH] refreshUser: sem user logado');
       return { ok: false, reason: 'NO_USER' };
     }
 
@@ -256,13 +266,10 @@ export function AuthProvider({ children }) {
       const data = await safeParseJson(response);
 
       if (!response.ok) {
-        console.log('[AUTH] refreshUser ERRO:', data);
         return { ok: false, status: response.status, data };
       }
 
       const updatedUser = mergeUserFromResponse(data);
-
-      console.log('[AUTH] refreshUser OK:', updatedUser);
 
       return {
         ok: true,
@@ -270,15 +277,74 @@ export function AuthProvider({ children }) {
         data,
       };
     } catch (err) {
-      console.log('[AUTH] refreshUser EXCEPTION:', err);
       return { ok: false, error: String(err) };
     }
   }, [API_BASE, user?.id, mergeUserFromResponse]);
 
+  const hasSeenTutorial = useCallback(
+    tutorialKey => {
+      if (!tutorialKey) return false;
+
+      return Boolean(
+        normalizeTutorialsSeen(user?.tutorialsSeen)?.[tutorialKey],
+      );
+    },
+    [user?.tutorialsSeen],
+  );
+
+  const markTutorialAsSeen = useCallback(
+    async tutorialKey => {
+      if (!user?.id) {
+        return { ok: false, reason: 'NO_USER' };
+      }
+
+      if (!tutorialKey) {
+        return { ok: false, reason: 'NO_TUTORIAL_KEY' };
+      }
+
+      try {
+        setIsSyncing(true);
+
+        const response = await fetch(
+          `${API_BASE}/users/${user.id}/tutorials/${tutorialKey}`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
+
+        const data = await safeParseJson(response);
+
+        if (!response.ok) {
+          return { ok: false, status: response.status, data };
+        }
+
+        const nextTutorialsSeen = {
+          ...normalizeTutorialsSeen(user.tutorialsSeen),
+          [tutorialKey]: true,
+        };
+
+        const updatedUser = mergeUserFromResponse(data, {
+          tutorialsSeen: nextTutorialsSeen,
+        });
+
+        return {
+          ok: true,
+          user: updatedUser,
+          data,
+        };
+      } catch (err) {
+        return { ok: false, error: String(err) };
+      } finally {
+        setIsSyncing(false);
+      }
+    },
+    [API_BASE, user?.id, user?.tutorialsSeen, mergeUserFromResponse],
+  );
+
   const updateGameStats = useCallback(
     async partialGameStats => {
       if (!user?.id) {
-        console.log('[AUTH] updateGameStats: sem user logado');
         return { ok: false, reason: 'NO_USER' };
       }
 
@@ -302,7 +368,6 @@ export function AuthProvider({ children }) {
         const data = await safeParseJson(response);
 
         if (!response.ok) {
-          console.log('[AUTH] updateGameStats ERRO:', data);
           return { ok: false, status: response.status, data };
         }
 
@@ -312,11 +377,8 @@ export function AuthProvider({ children }) {
             gameStats: nextStats,
           };
 
-        console.log('[AUTH] updateGameStats OK:', updatedUser?.gameStats);
-
         return { ok: true, user: updatedUser, data };
       } catch (err) {
-        console.log('[AUTH] updateGameStats EXCEPTION:', err);
         return { ok: false, error: String(err) };
       } finally {
         setIsSyncing(false);
@@ -328,7 +390,6 @@ export function AuthProvider({ children }) {
   const previewActivity = useCallback(
     async ({ atividade, acertos, erros, puladas, totalQuestoes }) => {
       if (!user?.id) {
-        console.log('[AUTH] previewActivity: sem user logado');
         return { ok: false, reason: 'NO_USER' };
       }
 
@@ -355,15 +416,10 @@ export function AuthProvider({ children }) {
         const data = await safeParseJson(response);
 
         if (!response.ok) {
-          console.log('[AUTH] previewActivity ERRO:', data);
           return { ok: false, status: response.status, data };
         }
 
         const reward = data?.reward ?? data?.data?.reward ?? null;
-
-        console.log('[AUTH] previewActivity OK:', {
-          reward,
-        });
 
         return {
           ok: true,
@@ -371,7 +427,6 @@ export function AuthProvider({ children }) {
           data,
         };
       } catch (err) {
-        console.log('[AUTH] previewActivity EXCEPTION:', err);
         return { ok: false, error: String(err) };
       } finally {
         setIsSyncing(false);
@@ -383,7 +438,6 @@ export function AuthProvider({ children }) {
   const completeActivity = useCallback(
     async ({ atividade, acertos, erros, puladas, totalQuestoes }) => {
       if (!user?.id) {
-        console.log('[AUTH] completeActivity: sem user logado');
         return { ok: false, reason: 'NO_USER' };
       }
 
@@ -410,17 +464,11 @@ export function AuthProvider({ children }) {
         const data = await safeParseJson(response);
 
         if (!response.ok) {
-          console.log('[AUTH] completeActivity ERRO:', data);
           return { ok: false, status: response.status, data };
         }
 
         const reward = data?.reward ?? data?.data?.reward ?? null;
         const updatedUser = mergeUserFromResponse(data);
-
-        console.log('[AUTH] completeActivity OK:', {
-          user: updatedUser,
-          reward,
-        });
 
         return {
           ok: true,
@@ -429,7 +477,6 @@ export function AuthProvider({ children }) {
           data,
         };
       } catch (err) {
-        console.log('[AUTH] completeActivity EXCEPTION:', err);
         return { ok: false, error: String(err) };
       } finally {
         setIsSyncing(false);
@@ -449,6 +496,8 @@ export function AuthProvider({ children }) {
       setUser,
       updateUser,
       refreshUser,
+      hasSeenTutorial,
+      markTutorialAsSeen,
       updateGameStats,
       previewActivity,
       completeActivity,
@@ -461,6 +510,8 @@ export function AuthProvider({ children }) {
       logout,
       updateUser,
       refreshUser,
+      hasSeenTutorial,
+      markTutorialAsSeen,
       updateGameStats,
       previewActivity,
       completeActivity,

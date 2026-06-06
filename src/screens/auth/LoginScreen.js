@@ -1,5 +1,3 @@
-// src/screens/auth/LoginScreen.js
-
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Platform,
@@ -42,6 +40,10 @@ import LoginBackground from '../../assets/images/login/login-background.png';
 import GoogleIcon from '../../assets/images/login/google.png';
 
 const teal = '#2FAFC4';
+
+function hasSeenIntroTutorial(user) {
+  return Boolean(user?.tutorialsSeen?.intro);
+}
 
 export default function LoginScreen() {
   const { login, loginWithGoogle } = useAuth();
@@ -86,10 +88,30 @@ export default function LoginScreen() {
     };
   }, [floatAnim]);
 
-  const goToHome = () => {
+  const goAfterLogin = loggedUser => {
+    const alreadySawIntro = hasSeenIntroTutorial(loggedUser);
+
+    if (alreadySawIntro) {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Tab' }],
+      });
+
+      return;
+    }
+
     navigation.reset({
       index: 0,
-      routes: [{ name: 'Tab' }],
+      routes: [
+        {
+          name: 'Tutorial',
+          params: {
+            tutorialKey: 'intro',
+            returnTo: 'Tab',
+            resetAfterFinish: true,
+          },
+        },
+      ],
     });
   };
 
@@ -120,7 +142,7 @@ export default function LoginScreen() {
         return;
       }
 
-      goToHome();
+      goAfterLogin(result.user);
     } catch (err) {
       console.log('GOOGLE LOGIN ERROR:', err);
       Alert.alert('Erro', 'Não foi possível entrar com Google.');
@@ -168,7 +190,7 @@ export default function LoginScreen() {
       }
 
       login(data);
-      goToHome();
+      goAfterLogin(data);
     } catch (err) {
       console.log('LOGIN ERROR:', err);
       Alert.alert(

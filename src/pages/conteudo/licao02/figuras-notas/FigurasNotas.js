@@ -41,13 +41,8 @@ function FigurasNotas() {
   const [isLoadingSlides, setIsLoadingSlides] = useState(true);
 
   const normalImageStyle = {
-    width: width * 0.95,
+    width: width * 0.92,
     height: height * 0.55,
-  };
-
-  const compactImageStyle = {
-    width: width * 0.95,
-    height: height * 0.48,
   };
 
   const observationImageStyle = {
@@ -105,7 +100,7 @@ function FigurasNotas() {
   const renderGroupedFigurasNotas01 = () => (
     <FlatView>
       <FastImage resizeMode="contain" source={Slide01} style={normalImageStyle} />
-      <FastImage resizeMode="contain" source={Slide02} style={compactImageStyle} />
+      <FastImage resizeMode="contain" source={Slide02} style={normalImageStyle} />
       <FastImage resizeMode="contain" source={Slide03} style={normalImageStyle} />
       <FastImage
         resizeMode="contain"
@@ -177,12 +172,20 @@ function FigurasNotas() {
       data={slides}
       style={{ backgroundColor: '#FFF' }}
       activeDotStyle={{
-        marginTop: '6%',
-        backgroundColor: '#96989A',
+        marginTop: '5%',
+        backgroundColor: '#2FAFC4',
+        width: 16,
+        height: 16,
+        borderRadius: 20,
+        marginHorizontal: 5
       }}
       dotStyle={{
-        marginTop: '6%',
-        backgroundColor: '#D2D3D5',
+        marginTop: '5%',
+        backgroundColor: '#D4D5D6',
+        width: 14,
+        height: 14,
+        borderRadius: 20,
+        marginHorizontal: 5
       }}
       showSkipButton
       showPrevButton

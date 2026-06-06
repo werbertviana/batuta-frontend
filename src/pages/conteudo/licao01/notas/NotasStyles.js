@@ -33,21 +33,6 @@ export const FlatView = styled.SafeAreaView`
     justify-content: center;
 `;
 
-export const SlideView2 = styled.SafeAreaView`
-    width: 100%;
-    height: 55%;
-    align-items: center;
-    justify-content: center;
-`;
-
-export const SlideView3 = styled.SafeAreaView`
-    height: 90px;
-    width: 100%;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-around;
-`;
-
 export const Div = styled.SafeAreaView`
     width: 100%;
     flex-direction: row;
@@ -65,15 +50,6 @@ export const DivFinal = styled.SafeAreaView`
     margin-bottom: 15px;
     padding-left: 12px;
     padding-right: 12px;
-`;
-
-export const DivisorLine2 = styled.SafeAreaView`
-    width: 100%;
-    height: 2px;
-    background-color: #D2D3D5;
-    border-radius: 5px;
-    align-items: center;
-    justify-content: center;
 `;
 
 export const DivisorLine = styled.SafeAreaView`
