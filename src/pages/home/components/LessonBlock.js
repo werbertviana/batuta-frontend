@@ -104,7 +104,7 @@ function LessonBlock({
           isOnlyLesson2Blocked && String(lesson.lesson) === '1'
             ? {
                 height: compactLesson1BoardHeight,
-                marginBottom: 8,
+                marginBottom: 10,
               }
             : undefined
         }
@@ -131,6 +131,8 @@ function LessonBlock({
                   content={item.content}
                   isActive={isItemActive(lesson, index)}
                   practiceRoute={item.practiceRoute}
+                  titleOffsetX={index % 2 === 0 ? -18 : 18}
+                  pointerOffsetX={index % 2 === 0 ? 12 : -12}
                 />
               </UnlockAnimatedItem>
             );

@@ -15,7 +15,7 @@ export default function useHomeLayoutMetrics() {
 
       compactLesson1IconWidth: Math.min(width * 0.68, 260),
       compactLesson1IconHeight: Math.min(height * 0.12, 110),
-      compactLesson1BoardHeight: Math.min(height * 0.55, 400),
+      compactLesson1BoardHeight: Math.min(height * 0.55, 420),
 
       lockedLessonIconWidth: Math.min(width * 0.64, 250),
       lockedLessonIconHeight: Math.min(height * 0.1, 95),

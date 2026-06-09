@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
-import { SafeAreaView } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, SafeAreaView } from 'react-native';
 import Modal from 'react-native-modal';
 
 import {
-  ImageFeedIcon,
+  ButtonDepthImage,
+  ButtonFaceAnimated,
+  ButtonFaceImage,
+  ButtonInnerArea,
+  ButtonOuterCircle,
+  FloatingTitleView,
   TextFeedTitle,
+  TitlePointer,
   TitleView,
   TouchableFeedItem,
 } from './FeedItemStyles';
@@ -12,46 +18,53 @@ import {
 import ModalItem from '../modal/ModalItem';
 import LockedModal from '../modal/LockedModal';
 
+const PRESS_DISTANCE = 8;
+
 const iconMap = {
   'feed01.png': {
-    active: require('../../assets/images/home/feed01_active.png'),
-    inactive: require('../../assets/images/home/feed01_inactive.png'),
+    faceActive: require('../../assets/images/home/feed01_face_active.png'),
+    faceInactive: require('../../assets/images/home/feed01_face_inactive.png'),
   },
   'feed02.png': {
-    active: require('../../assets/images/home/feed02_active.png'),
-    inactive: require('../../assets/images/home/feed02_inactive.png'),
+    faceActive: require('../../assets/images/home/feed02_face_active.png'),
+    faceInactive: require('../../assets/images/home/feed02_face_inactive.png'),
   },
   'feed03.png': {
-    active: require('../../assets/images/home/feed03_active.png'),
-    inactive: require('../../assets/images/home/feed03_inactive.png'),
+    faceActive: require('../../assets/images/home/feed03_face_active.png'),
+    faceInactive: require('../../assets/images/home/feed03_face_inactive.png'),
   },
   'feed04.png': {
-    active: require('../../assets/images/home/feed04_active.png'),
-    inactive: require('../../assets/images/home/feed04_inactive.png'),
+    faceActive: require('../../assets/images/home/feed04_face_active.png'),
+    faceInactive: require('../../assets/images/home/feed04_face_inactive.png'),
   },
   'feed05.png': {
-    active: require('../../assets/images/home/feed05_active.png'),
-    inactive: require('../../assets/images/home/feed05_inactive.png'),
+    faceActive: require('../../assets/images/home/feed05_face_active.png'),
+    faceInactive: require('../../assets/images/home/feed05_face_inactive.png'),
   },
   'feed06.png': {
-    active: require('../../assets/images/home/feed06_active.png'),
-    inactive: require('../../assets/images/home/feed06_inactive.png'),
+    faceActive: require('../../assets/images/home/feed06_face_active.png'),
+    faceInactive: require('../../assets/images/home/feed06_face_inactive.png'),
   },
   'feed07.png': {
-    active: require('../../assets/images/home/feed07_active.png'),
-    inactive: require('../../assets/images/home/feed07_inactive.png'),
+    faceActive: require('../../assets/images/home/feed07_face_active.png'),
+    faceInactive: require('../../assets/images/home/feed07_face_inactive.png'),
   },
   'feed08.png': {
-    active: require('../../assets/images/home/feed08_active.png'),
-    inactive: require('../../assets/images/home/feed08_inactive.png'),
+    faceActive: require('../../assets/images/home/feed08_face_active.png'),
+    faceInactive: require('../../assets/images/home/feed08_face_inactive.png'),
   },
+};
+
+const depthMap = {
+  active: require('../../assets/images/home/feed_depth_active.png'),
+  inactive: require('../../assets/images/home/feed_depth_inactive.png'),
 };
 
 const fallbackIcon = iconMap['feed01.png'];
 
-const getIcon = (iconName, isActive) => {
-  const icon = iconMap[iconName] || fallbackIcon;
-  return isActive ? icon.active : icon.inactive;
+const getFaceIcon = (iconName, isActive) => {
+  const iconData = iconMap[iconName] || fallbackIcon;
+  return isActive ? iconData.faceActive : iconData.faceInactive;
 };
 
 const FeedItem = ({
@@ -60,29 +73,142 @@ const FeedItem = ({
   isActive = true,
   practiceRoute,
   content,
+  titleOffsetX = 0,
+  pointerOffsetX = 0,
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [lockedVisible, setLockedVisible] = useState(false);
 
-  const handlePress = () => {
+  const floatAnim = useRef(new Animated.Value(0)).current;
+  const pressAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
     if (!isActive) {
-      setLockedVisible(true);
+      floatAnim.stopAnimation();
+      floatAnim.setValue(0);
       return;
     }
 
-    setModalVisible(true);
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, {
+          toValue: -7,
+          duration: 800,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatAnim, {
+          toValue: 0,
+          duration: 900,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    animation.start();
+
+    return () => animation.stop();
+  }, [floatAnim, isActive]);
+
+  const animateButtonDown = () => {
+    Animated.timing(pressAnim, {
+      toValue: PRESS_DISTANCE,
+      duration: 70,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const animateButtonUp = (callback) => {
+    Animated.timing(pressAnim, {
+      toValue: 0,
+      duration: 90,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: true,
+    }).start(() => {
+      if (callback) callback();
+    });
+  };
+
+  const pressDown = () => {
+    animateButtonDown();
+  };
+
+  const pressUp = () => {
+    animateButtonUp();
+  };
+
+  const handlePress = () => {
+    Animated.sequence([
+      Animated.timing(pressAnim, {
+        toValue: PRESS_DISTANCE,
+        duration: 70,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.delay(40),
+      Animated.timing(pressAnim, {
+        toValue: 0,
+        duration: 90,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      if (!isActive) {
+        setLockedVisible(true);
+        return;
+      }
+
+      setModalVisible(true);
+    });
   };
 
   return (
     <SafeAreaView style={{ margin: 10 }}>
-      <TouchableFeedItem activeOpacity={0.8} onPress={handlePress}>
-        <ImageFeedIcon resizeMode="contain" source={getIcon(icon, isActive)} />
+      <TouchableFeedItem
+        activeOpacity={1}
+        onPressIn={pressDown}
+        onPressOut={pressUp}
+        onPress={handlePress}
+      >
+        <FloatingTitleView
+          pointerEvents="none"
+          style={{ transform: [{ translateY: floatAnim }] }}
+        >
+          <TitleView style={{ transform: [{ translateX: titleOffsetX }] }}>
+            <TextFeedTitle style={{ color: isActive ? '#1F1F1F' : '#9E9E9E' }}>
+              {title}
+            </TextFeedTitle>
 
-        <TitleView>
-          <TextFeedTitle style={{ color: isActive ? 'black' : 'gray' }}>
-            {title}
-          </TextFeedTitle>
-        </TitleView>
+            <TitlePointer
+              style={{
+                transform: [
+                  { translateX: pointerOffsetX },
+                  { rotate: '45deg' },
+                ],
+              }}
+            />
+          </TitleView>
+        </FloatingTitleView>
+
+        <ButtonOuterCircle>
+          <ButtonInnerArea>
+            <ButtonDepthImage
+              resizeMode="contain"
+              source={isActive ? depthMap.active : depthMap.inactive}
+            />
+
+            <ButtonFaceAnimated
+              style={{ transform: [{ translateY: pressAnim }] }}
+            >
+              <ButtonFaceImage
+                resizeMode="contain"
+                source={getFaceIcon(icon, isActive)}
+              />
+            </ButtonFaceAnimated>
+          </ButtonInnerArea>
+        </ButtonOuterCircle>
       </TouchableFeedItem>
 
       <Modal

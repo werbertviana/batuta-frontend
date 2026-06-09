@@ -54,7 +54,7 @@ export const LifeImage = styled(FastImage)`
 export const BatutaText = styled.Text`
     font-family: DINRoundPro-Medi;
     font-size: 28px;
-    color: #FC48A2;
+    color: #AA6E5E;
     margin-left: 5px;
 `;
 

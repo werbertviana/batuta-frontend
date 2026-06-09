@@ -1,8 +1,9 @@
+// src/screens/auth/LoginScreen.js
+
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Platform,
   KeyboardAvoidingView,
-  Alert,
   Animated,
   Easing,
   Image,
@@ -20,6 +21,7 @@ import {
   InputWrapper,
   InputIconArea,
   StyledTextInput,
+  FieldErrorText,
   ForgotPasswordText,
   ButtonsContainer,
   GoogleButton,
@@ -45,6 +47,14 @@ function hasSeenIntroTutorial(user) {
   return Boolean(user?.tutorialsSeen?.intro);
 }
 
+function normalizeEmail(value) {
+  return value.trim().toLowerCase();
+}
+
+function isValidEmailFormat(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value);
+}
+
 export default function LoginScreen() {
   const { login, loginWithGoogle } = useAuth();
   const navigation = useNavigation();
@@ -53,6 +63,11 @@ export default function LoginScreen() {
 
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
+
+  const [emailError, setEmailError] = useState('');
+  const [senhaError, setSenhaError] = useState('');
+  const [generalError, setGeneralError] = useState('');
+
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
@@ -87,6 +102,35 @@ export default function LoginScreen() {
       animation.stop();
     };
   }, [floatAnim]);
+
+  function clearErrors() {
+    setEmailError('');
+    setSenhaError('');
+    setGeneralError('');
+  }
+
+  function validateForm() {
+    clearErrors();
+
+    const trimmedEmail = normalizeEmail(email);
+
+    if (!trimmedEmail) {
+      setEmailError('Informe seu email.');
+      return false;
+    }
+
+    if (!isValidEmailFormat(trimmedEmail)) {
+      setEmailError('Informe um email válido.');
+      return false;
+    }
+
+    if (!senha.trim()) {
+      setSenhaError('Informe sua senha.');
+      return false;
+    }
+
+    return true;
+  }
 
   const goAfterLogin = loggedUser => {
     const alreadySawIntro = hasSeenIntroTutorial(loggedUser);
@@ -129,33 +173,30 @@ export default function LoginScreen() {
   };
 
   const handleGoogleLogin = async () => {
+    if (isBusy) return;
+
     try {
+      clearErrors();
       setGoogleLoading(true);
 
       const result = await loginWithGoogle();
 
       if (!result?.ok) {
-        Alert.alert(
-          'Erro',
-          result?.message || 'Não foi possível entrar com Google.',
-        );
+        setGeneralError(result?.message || 'Não foi possível entrar com Google.');
         return;
       }
 
       goAfterLogin(result.user);
     } catch (err) {
       console.log('GOOGLE LOGIN ERROR:', err);
-      Alert.alert('Erro', 'Não foi possível entrar com Google.');
+      setGeneralError('Não foi possível entrar com Google.');
     } finally {
       setGoogleLoading(false);
     }
   };
 
   const handleLogin = async () => {
-    if (!email.trim() || !senha.trim()) {
-      Alert.alert('Atenção', 'Informe email e senha.');
-      return;
-    }
+    if (!validateForm()) return;
 
     try {
       setLoading(true);
@@ -164,7 +205,7 @@ export default function LoginScreen() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: email.trim(),
+          email: normalizeEmail(email),
           password: senha,
         }),
       });
@@ -178,13 +219,33 @@ export default function LoginScreen() {
       }
 
       if (!response.ok) {
-        const backendMessage =
-          data?.error?.message || 'Falha no login. Verifique suas credenciais.';
         const backendCode = data?.error?.code;
+        const backendMessage = data?.error?.message;
 
-        Alert.alert(
-          'Erro',
-          backendCode ? `${backendMessage} (${backendCode})` : backendMessage,
+        if (backendCode === 'USER_NOT_FOUND' || backendCode === 'EMAIL_NOT_FOUND') {
+          setEmailError('Este email não está cadastrado.');
+          return;
+        }
+
+        if (backendCode === 'INVALID_PASSWORD') {
+          setSenhaError('Senha incorreta.');
+          return;
+        }
+
+        if (backendCode === 'GOOGLE_ACCOUNT_WITHOUT_PASSWORD') {
+          setGeneralError(
+            'Essa conta foi criada com Google. Entre usando o botão do Google.',
+          );
+          return;
+        }
+
+        if (backendCode === 'INVALID_CREDENTIALS') {
+          setGeneralError('Email ou senha incorretos.');
+          return;
+        }
+
+        setGeneralError(
+          backendMessage || 'Falha no login. Verifique suas credenciais.',
         );
         return;
       }
@@ -193,9 +254,8 @@ export default function LoginScreen() {
       goAfterLogin(data);
     } catch (err) {
       console.log('LOGIN ERROR:', err);
-      Alert.alert(
-        'Erro de rede',
-        'Não foi possível conectar ao servidor. Verifique a URL/porta e sua conexão.',
+      setGeneralError(
+        'Não foi possível conectar ao servidor. Verifique sua conexão.',
       );
     } finally {
       setLoading(false);
@@ -221,10 +281,7 @@ export default function LoginScreen() {
                 <Image
                   source={GoogleIcon}
                   resizeMode="contain"
-                  style={{
-                    width: 22,
-                    height: 22,
-                  }}
+                  style={{ width: 22, height: 22 }}
                 />
               </GoogleIconCircle>
 
@@ -241,7 +298,7 @@ export default function LoginScreen() {
           </ButtonsContainer>
 
           <Form>
-            <InputWrapper>
+            <InputWrapper hasError={!!emailError}>
               <InputIconArea>
                 <Feather name="mail" size={22} color={teal} />
               </InputIconArea>
@@ -253,12 +310,17 @@ export default function LoginScreen() {
                 autoCapitalize="none"
                 autoCorrect={false}
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={value => {
+                  setEmail(value);
+                  setEmailError('');
+                  setGeneralError('');
+                }}
                 editable={!isBusy}
               />
             </InputWrapper>
+            {!!emailError && <FieldErrorText>{emailError}</FieldErrorText>}
 
-            <InputWrapper style={{ marginTop: 16 }}>
+            <InputWrapper hasError={!!senhaError} style={{ marginTop: 16 }}>
               <InputIconArea>
                 <Feather name="lock" size={22} color={teal} />
               </InputIconArea>
@@ -268,10 +330,17 @@ export default function LoginScreen() {
                 placeholderTextColor="#9a9a9a"
                 secureTextEntry
                 value={senha}
-                onChangeText={setSenha}
+                onChangeText={value => {
+                  setSenha(value);
+                  setSenhaError('');
+                  setGeneralError('');
+                }}
                 editable={!isBusy}
               />
             </InputWrapper>
+            {!!senhaError && <FieldErrorText>{senhaError}</FieldErrorText>}
+
+            {!!generalError && <FieldErrorText>{generalError}</FieldErrorText>}
 
             <ForgotPasswordText onPress={handleForgotPassword}>
               Esqueceu a senha?

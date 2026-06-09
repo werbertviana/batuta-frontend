@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Image, StatusBar } from 'react-native';
+import { Image, StatusBar, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Awesome from 'react-native-vector-icons/FontAwesome5';
 
@@ -14,6 +14,19 @@ const EloIcon = require('../assets/icons/elo.png');
 const ProfileIcon = require('../assets/icons/profile.png');
 
 const Tab = createBottomTabNavigator();
+
+const TabIconBox = ({ children }) => (
+  <View
+    style={{
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}
+  >
+    {children}
+  </View>
+);
 
 function TabNavigation() {
   const { hasSeenTutorial } = useAuth();
@@ -36,6 +49,7 @@ function TabNavigation() {
           tabBarHideOnKeyboard: true,
           headerShown: false,
           tabBarActiveTintColor: '#000000',
+          tabBarInactiveTintColor: '#8f8f8f',
           tabBarStyle: {
             height: 60,
             borderTopWidth: 1,
@@ -51,40 +65,9 @@ function TabNavigation() {
           component={Home}
           options={{
             tabBarIcon: ({ color }) => (
-              <Awesome name="home" color={color} size={28} />
-            ),
-          }}
-        />
-
-        <Tab.Screen
-          name="Profile"
-          component={Profile}
-          listeners={({ navigation }) => ({
-            tabPress: e => {
-              if (hasSeenTutorial('profile')) return;
-
-              e.preventDefault();
-
-              navigation.navigate('Tutorial', {
-                tutorialKey: 'profile',
-                returnTo: 'Tab',
-                returnParams: {
-                  screen: 'Profile',
-                },
-                resetAfterFinish: true,
-              });
-            },
-          })}
-          options={{
-            tabBarIcon: ({ color }) => (
-              <Image
-                source={ProfileIcon}
-                style={{
-                  width: 35,
-                  height: 35,
-                  tintColor: color,
-                }}
-              />
+              <TabIconBox>
+                <Awesome name="home" color={color} size={32} />
+              </TabIconBox>
             ),
           }}
         />
@@ -110,14 +93,53 @@ function TabNavigation() {
           })}
           options={{
             tabBarIcon: ({ color }) => (
-              <Image
-                source={EloIcon}
-                style={{
-                  width: 35,
-                  height: 35,
-                  tintColor: color,
-                }}
-              />
+              <TabIconBox>
+                <Image
+                  source={EloIcon}
+                  resizeMode="contain"
+                  style={{
+                    width: 38,
+                    height: 38,
+                    tintColor: color,
+                  }}
+                />
+              </TabIconBox>
+            ),
+          }}
+        />
+
+        <Tab.Screen
+          name="Profile"
+          component={Profile}
+          listeners={({ navigation }) => ({
+            tabPress: e => {
+              if (hasSeenTutorial('profile')) return;
+
+              e.preventDefault();
+
+              navigation.navigate('Tutorial', {
+                tutorialKey: 'profile',
+                returnTo: 'Tab',
+                returnParams: {
+                  screen: 'Profile',
+                },
+                resetAfterFinish: true,
+              });
+            },
+          })}
+          options={{
+            tabBarIcon: ({ color }) => (
+              <TabIconBox>
+                <Image
+                  source={ProfileIcon}
+                  resizeMode="contain"
+                  style={{
+                    width: 36,
+                    height: 36,
+                    tintColor: color,
+                  }}
+                />
+              </TabIconBox>
             ),
           }}
         />

@@ -19,6 +19,12 @@ const DEFAULT_TUTORIALS_SEEN = {
   elos: false,
 };
 
+const DEFAULT_STREAK = {
+  currentStreak: 0,
+  bestStreak: 0,
+  lastPracticeAt: null,
+};
+
 async function safeParseJson(response) {
   try {
     return await response.json();
@@ -34,12 +40,20 @@ function normalizeTutorialsSeen(tutorialsSeen) {
   };
 }
 
+function normalizeStreak(streak) {
+  return {
+    ...DEFAULT_STREAK,
+    ...(streak || {}),
+  };
+}
+
 function normalizeUser(userData) {
   if (!userData) return null;
 
   return {
     ...userData,
     tutorialsSeen: normalizeTutorialsSeen(userData.tutorialsSeen),
+    streak: normalizeStreak(userData.streak),
   };
 }
 
@@ -74,12 +88,17 @@ function extractUserFromResponse(data) {
   return null;
 }
 
+function extractStreakFromResponse(data) {
+  return data?.streak || data?.data?.streak || null;
+}
+
 function extractUserPatchFromResponse(data) {
   if (!data) return null;
 
   const patch = {};
   const reward = data?.reward ?? data?.data?.reward ?? null;
   const user = extractUserFromResponse(data);
+  const streak = extractStreakFromResponse(data);
 
   if (user) return user;
 
@@ -89,6 +108,10 @@ function extractUserPatchFromResponse(data) {
   if (data.life !== undefined) patch.life = data.life;
   if (data.lifePoints !== undefined) patch.lifePoints = data.lifePoints;
   if (data.gameStats) patch.gameStats = data.gameStats;
+
+  if (streak) {
+    patch.streak = normalizeStreak(streak);
+  }
 
   if (data.tutorialsSeen) {
     patch.tutorialsSeen = normalizeTutorialsSeen(data.tutorialsSeen);
@@ -222,6 +245,9 @@ export function AuthProvider({ children }) {
       normalizeUser({
         ...(currentUser || {}),
         ...(userData || {}),
+        ...(userData?.streak
+          ? { streak: normalizeStreak(userData.streak) }
+          : {}),
       }),
     );
   }, []);
@@ -244,6 +270,10 @@ export function AuthProvider({ children }) {
       nextUser = normalizeUser({
         ...(currentUser || {}),
         ...nextPatch,
+        streak: normalizeStreak({
+          ...(currentUser?.streak || {}),
+          ...(nextPatch?.streak || {}),
+        }),
       });
 
       return nextUser;
@@ -468,12 +498,16 @@ export function AuthProvider({ children }) {
         }
 
         const reward = data?.reward ?? data?.data?.reward ?? null;
-        const updatedUser = mergeUserFromResponse(data);
+        const streak = extractStreakFromResponse(data);
+        const updatedUser = mergeUserFromResponse(data, {
+          ...(streak ? { streak: normalizeStreak(streak) } : {}),
+        });
 
         return {
           ok: true,
           user: updatedUser,
           reward,
+          streak: updatedUser?.streak || normalizeStreak(streak),
           data,
         };
       } catch (err) {

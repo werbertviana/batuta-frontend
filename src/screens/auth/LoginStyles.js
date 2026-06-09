@@ -45,7 +45,7 @@ export const InputWrapper = styled.View`
   border-radius: 14px;
   height: ${Math.min(height * 0.062, 52)}px;
   border-bottom-width: 3px;
-  border-color: #d4d6d6;
+  border-color: ${({ hasError }) => (hasError ? '#ff3b3b' : '#d4d6d6')};
   border-left-width: 0.5px;
   border-right-width: 0.5px;
 `;
@@ -181,4 +181,13 @@ export const CreateAccountLink = styled.Text`
   font-size: ${Math.min(width * 0.053, 21)}px;
   color: #236a79;
   margin-left: 6px;
+`;
+
+export const FieldErrorText = styled.Text`
+  font-family: 'GothamCondensed-Medium';
+  font-size: ${Math.min(width * 0.042, 16)}px;
+  color: #ff3b3b;
+  margin-top: 5px;
+  margin-bottom: -3px;
+  padding-left: 4px;
 `;

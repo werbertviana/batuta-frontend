@@ -20,7 +20,7 @@ export const FeedContainer = styled.SafeAreaView`
 
 export const Background = styled.ImageBackground`
     width: ${width}px;  
-    height: 420px;
+    height: 455px;
     justify-content: center;
     align-items: center;
     margin-bottom: 20px; 
@@ -42,6 +42,7 @@ export const LessonContainer = styled.SafeAreaView`
     width: 100%;
     align-items: center;
     justify-content: center;
+    margin-bottom: 16px;
 `;
 
 export const DivisorLine = styled.SafeAreaView`
