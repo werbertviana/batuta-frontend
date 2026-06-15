@@ -12,6 +12,8 @@ import {
 } from './GameCircleButtonStyles';
 
 const PRESS_DISTANCE = 8;
+const ELLIPSE_SCALE_Y = 0.82;
+const ICON_COMPENSATE_SCALE_Y = 1 / ELLIPSE_SCALE_Y;
 
 function GameCircleButton({
   icon,
@@ -72,15 +74,29 @@ function GameCircleButton({
     >
       <ButtonOuterCircle>
         <ButtonInnerArea>
-          <ButtonDepthCircle isActive={isActive} />
+          <ButtonDepthCircle
+            isActive={isActive}
+            style={{
+              transform: [{ scaleY: ELLIPSE_SCALE_Y }],
+            }}
+          />
 
           <ButtonFaceAnimated
             style={{
-              transform: [{ translateY: pressAnim }],
+              transform: [
+                { translateY: pressAnim },
+                { scaleY: ELLIPSE_SCALE_Y },
+              ],
             }}
           >
             <ButtonFaceCircle isActive={isActive}>
-              <ButtonIcon source={icon} resizeMode="contain" />
+              <ButtonIcon
+                source={icon}
+                resizeMode="contain"
+                style={{
+                  transform: [{ scaleY: ICON_COMPENSATE_SCALE_Y }],
+                }}
+              />
             </ButtonFaceCircle>
           </ButtonFaceAnimated>
         </ButtonInnerArea>

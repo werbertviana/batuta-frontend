@@ -1,7 +1,9 @@
-// src/screens/home/Home.js
-
-import React, { useEffect, useRef, useState } from 'react';
-import { Dimensions, FlatList, View, TouchableWithoutFeedback } from 'react-native';
+import React, { useRef, useState } from 'react';
+import {
+  Dimensions,
+  FlatList,
+  View,
+} from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 
@@ -32,8 +34,8 @@ import EloUpModal from '../../components/modal/EloUpModal';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
 
-const EXTRA_ACTION_SPACE = 280; 
-const TARGET_CENTER_Y = screenHeight * 0.40; // Ponto ideal para alinhar o topo do item focado
+const EXTRA_ACTION_SPACE = 150;
+const TARGET_CENTER_Y = screenHeight * 0.4;
 const POPOVER_WIDTH = 280;
 
 const contentRouteMap = {
@@ -65,15 +67,17 @@ function Home({ route }) {
 
   const flatListRef = useRef(null);
   const scrollOffsetRef = useRef(0);
+  const pendingMeasureRef = useRef(null);
+  const lastPopoverLayoutRef = useRef(null);
+  const pendingActionRef = useRef(null);
 
   const [activeActionKey, setActiveActionKey] = useState(null);
   const [renderPopover, setRenderPopover] = useState(null);
   const [actionSpaceVisible, setActionSpaceVisible] = useState(false);
-  
-  // Guarda a função que mede o botão para ser executada após o scroll parar
-  const pendingMeasureRef = useRef(null);
+  const [isPopoverClosing, setIsPopoverClosing] = useState(false);
 
   const layoutMetrics = useHomeLayoutMetrics();
+
   const {
     height,
     unlockGlowSize,
@@ -157,69 +161,65 @@ function Home({ route }) {
   const isOnlyLesson2Blocked = feeds.length === 2 && isLessonBlocked('2');
 
   const closeActions = () => {
+    if (renderPopover && !isPopoverClosing) {
+      lastPopoverLayoutRef.current = renderPopover;
+      setIsPopoverClosing(true);
+    }
+  };
+
+  const handlePopoverAnimationEnd = () => {
     setActiveActionKey(null);
     setRenderPopover(null);
     setActionSpaceVisible(false);
+    setIsPopoverClosing(false);
+
     pendingMeasureRef.current = null;
+    lastPopoverLayoutRef.current = null;
+    pendingActionRef.current = null;
   };
 
-  // Mede e renderiza o card exatamente onde o botão se encontra
   const measureAndShowPopover = (actionData, measureFn) => {
-    measureFn((fx, fy, width, height, px, py) => {
+    measureFn((fx, fy, width, measuredHeight, px, py) => {
       const isLeftSide = actionData.index % 2 === 0;
-      
-      // Ajusta a setinha de acordo com o lado do item
-      const pointerLeft = isLeftSide ? 58 : 198; 
-      
-      // Posição padrão fixa: 10 pixels cravados abaixo do botão
-      const fixedTopPosition = py + height + 10;
+      const pointerLeft = isLeftSide ? 58 : 198;
+      const fixedTopPosition = py + measuredHeight + 10;
 
-      setRenderPopover({
+      const popoverLayout = {
         top: fixedTopPosition,
         pointerLeft,
         itemData: actionData,
-      });
+      };
+
+      lastPopoverLayoutRef.current = popoverLayout;
+
+      setIsPopoverClosing(false);
+      setRenderPopover(popoverLayout);
     });
   };
 
-  const handleOpenActions = (actionData, measureButtonNativeFn) => {
-    if (activeActionKey === actionData.key) {
-      closeActions();
-      return;
-    }
-
-    setRenderPopover(null);
-    setActiveActionKey(actionData.key);
-    setActionSpaceVisible(true);
-
+  const openActionsAfterSpaceReady = (actionData, measureButtonNativeFn) => {
     const currentOffset = scrollOffsetRef.current;
     const originalAnchorY = actionData.anchor?.pageY ?? TARGET_CENTER_Y;
 
-    // Calcula a distância do scroll para alinhar o item na tela
     const scrollDelta = originalAnchorY - TARGET_CENTER_Y;
     let targetOffset = currentOffset + scrollDelta;
 
-    // INTERCEPTAÇÃO: Se o destino for o topo da lista (ou menor), ela não vai conseguir rolar
     if (targetOffset <= 0) {
       targetOffset = 0;
-      
-      // Se a lista já está estacionada no topo (0px), abre o card na hora!
+
       if (currentOffset === 0) {
-        pendingMeasureRef.current = null;
         measureAndShowPopover(actionData, measureButtonNativeFn);
         return;
       }
     }
 
-    // Se o movimento for insignificante (menos de 5px), também abre direto
     if (Math.abs(scrollDelta) < 5) {
-      pendingMeasureRef.current = null;
       measureAndShowPopover(actionData, measureButtonNativeFn);
       return;
     }
 
-    // Caso precise rolar, agendamos para executar no fim do scroll estável
-    pendingMeasureRef.current = () => measureAndShowPopover(actionData, measureButtonNativeFn);
+    pendingMeasureRef.current = () =>
+      measureAndShowPopover(actionData, measureButtonNativeFn);
 
     flatListRef.current?.scrollToOffset({
       offset: targetOffset,
@@ -227,7 +227,43 @@ function Home({ route }) {
     });
   };
 
-  // Disparado de forma assíncrona/nativa quando as animações de scroll param completamente
+  const handleOpenActions = (actionData, measureButtonNativeFn) => {
+    const isSameItem = activeActionKey === actionData.key;
+
+    if (isSameItem) {
+      closeActions();
+      return;
+    }
+
+    pendingMeasureRef.current = null;
+
+    setRenderPopover(null);
+    setIsPopoverClosing(false);
+    setActiveActionKey(actionData.key);
+
+    pendingActionRef.current = {
+      actionData,
+      measureButtonNativeFn,
+    };
+
+    setActionSpaceVisible(true);
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const pendingAction = pendingActionRef.current;
+
+        if (!pendingAction) return;
+
+        pendingActionRef.current = null;
+
+        openActionsAfterSpaceReady(
+          pendingAction.actionData,
+          pendingAction.measureButtonNativeFn,
+        );
+      });
+    });
+  };
+
   const handleScrollEnd = () => {
     if (pendingMeasureRef.current) {
       pendingMeasureRef.current();
@@ -235,16 +271,14 @@ function Home({ route }) {
     }
   };
 
-  const resetActionState = () => {
-    closeActions();
-  };
-
-  const handleNavigateContent = (itemData) => {
+  const handleNavigateContent = itemData => {
     if (!itemData) return;
+
     const contentKey = String(itemData.content ?? '');
     const routeName = contentRouteMap[contentKey] || itemData.title;
 
-    resetActionState();
+    handlePopoverAnimationEnd();
+
     if (!routeName) return;
 
     if (!hasSeenTutorial('content')) {
@@ -256,14 +290,17 @@ function Home({ route }) {
       });
       return;
     }
+
     navigation.navigate(routeName, { content: contentKey });
   };
 
-  const handleNavigatePractice = (itemData) => {
+  const handleNavigatePractice = itemData => {
     if (!itemData) return;
+
     const routeName = itemData.practiceRoute || practiceRouteMap[itemData.title];
 
-    resetActionState();
+    handlePopoverAnimationEnd();
+
     if (!routeName) return;
 
     if (!hasSeenTutorial('activity')) {
@@ -274,8 +311,11 @@ function Home({ route }) {
       });
       return;
     }
+
     navigation.navigate(routeName);
   };
+
+  const popoverLayout = renderPopover ?? lastPopoverLayoutRef.current;
 
   if (isLoadingFeeds) {
     return <BatutaLoader text="Carregando lições..." />;
@@ -283,73 +323,81 @@ function Home({ route }) {
 
   return (
     <HomeContainer>
-      <TouchableWithoutFeedback onPress={closeActions}>
-        <View style={{ flex: 1 }}>
-          <Header
-            xpPoints={xpPoints}
-            batutaPoints={batutaPoints}
-            lifePoints={life}
-          />
+      <View
+        style={{ flex: 1 }}
+        onTouchStart={() => {
+          closeActions();
+        }}
+      >
+        <Header
+          xpPoints={xpPoints}
+          batutaPoints={batutaPoints}
+          lifePoints={life}
+        />
 
-          <FlatList
-            ref={flatListRef}
-            data={feeds}
-            keyExtractor={lesson => String(lesson.lesson)}
-            renderItem={({ item }) => (
-              <LessonBlock
-                lesson={item}
-                isBlocked={isLessonBlocked(item.lesson)}
-                isOnlyLesson2Blocked={isOnlyLesson2Blocked}
-                height={height}
-                compactLesson1IconWidth={compactLesson1IconWidth}
-                compactLesson1IconHeight={compactLesson1IconHeight}
-                compactLesson1BoardHeight={compactLesson1BoardHeight}
-                lockedLessonIconWidth={lockedLessonIconWidth}
-                lockedLessonIconHeight={lockedLessonIconHeight}
-                lockedCardWidth={lockedCardWidth}
-                lockedCardHeight={lockedCardHeight}
-                lockedCardMarginBottom={lockedCardMarginBottom}
-                recentlyUnlockedKey={recentlyUnlockedKey}
-                unlockGlowSize={unlockGlowSize}
-                getLessonIcon={getLessonIcon}
-                isItemActive={isItemActive}
-                onOpenLockedLesson={handleOpenLockedLesson}
-                onClearUnlockAnimation={clearUnlockAnimation}
-                onOpenActions={handleOpenActions}
-              />
-            )}
-            showsVerticalScrollIndicator={false}
-            scrollEnabled={!isOnlyLesson2Blocked}
-            scrollEventThrottle={16}
-            onScroll={event => {
-              scrollOffsetRef.current = event.nativeEvent.contentOffset.y;
-            }}
-            onScrollBeginDrag={closeActions}
-            onMomentumScrollEnd={handleScrollEnd}
-            onScrollAnimationEnd={handleScrollEnd}
-            contentContainerStyle={{
-              paddingBottom: actionSpaceVisible ? EXTRA_ACTION_SPACE : 40,
-            }}
-          />
-        </View>
-      </TouchableWithoutFeedback>
+        <FlatList
+          ref={flatListRef}
+          data={feeds}
+          keyExtractor={lesson => String(lesson.lesson)}
+          renderItem={({ item }) => (
+            <LessonBlock
+              lesson={item}
+              isBlocked={isLessonBlocked(item.lesson)}
+              isOnlyLesson2Blocked={isOnlyLesson2Blocked}
+              height={height}
+              compactLesson1IconWidth={compactLesson1IconWidth}
+              compactLesson1IconHeight={compactLesson1IconHeight}
+              compactLesson1BoardHeight={compactLesson1BoardHeight}
+              lockedLessonIconWidth={lockedLessonIconWidth}
+              lockedLessonIconHeight={lockedLessonIconHeight}
+              lockedCardWidth={lockedCardWidth}
+              lockedCardHeight={lockedCardHeight}
+              lockedCardMarginBottom={lockedCardMarginBottom}
+              recentlyUnlockedKey={recentlyUnlockedKey}
+              unlockGlowSize={unlockGlowSize}
+              getLessonIcon={getLessonIcon}
+              isItemActive={isItemActive}
+              onOpenLockedLesson={handleOpenLockedLesson}
+              onClearUnlockAnimation={clearUnlockAnimation}
+              onOpenActions={handleOpenActions}
+            />
+          )}
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={!isOnlyLesson2Blocked}
+          scrollEventThrottle={16}
+          onScroll={event => {
+            scrollOffsetRef.current = event.nativeEvent.contentOffset.y;
+          }}
+          onScrollBeginDrag={closeActions}
+          onMomentumScrollEnd={handleScrollEnd}
+          onScrollAnimationEnd={handleScrollEnd}
+          contentContainerStyle={{
+            paddingBottom: actionSpaceVisible ? EXTRA_ACTION_SPACE : 35,
+          }}
+        />
+      </View>
 
-      {/* Camada global absoluta de primeiro plano real */}
-      {renderPopover && (
+      {(renderPopover !== null || isPopoverClosing) && popoverLayout && (
         <View
+          pointerEvents={isPopoverClosing ? 'none' : 'auto'}
           style={{
             position: 'absolute',
-            top: renderPopover.top,
-            left: (screenWidth - POPOVER_WIDTH) / 2, 
+            top: popoverLayout.top,
+            left: (screenWidth - POPOVER_WIDTH) / 2,
             width: POPOVER_WIDTH,
             zIndex: 99999,
             elevation: 20,
           }}
         >
           <ActionPopover
-            pointerStyle={{ left: renderPopover.pointerLeft, top: -10 }}
-            onPressContent={() => handleNavigateContent(renderPopover.itemData)}
-            onPressPractice={() => handleNavigatePractice(renderPopover.itemData)}
+            pointerStyle={{
+              left: popoverLayout.pointerLeft,
+              top: -10,
+            }}
+            isClosing={isPopoverClosing}
+            onAnimationEnd={handlePopoverAnimationEnd}
+            onPressContent={() => handleNavigateContent(popoverLayout.itemData)}
+            onPressPractice={() => handleNavigatePractice(popoverLayout.itemData)}
           />
         </View>
       )}
