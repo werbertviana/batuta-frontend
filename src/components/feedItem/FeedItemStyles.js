@@ -1,16 +1,15 @@
 import styled from 'styled-components/native';
-import FastImage from 'react-native-fast-image';
 import { Animated } from 'react-native';
 
-export const TouchableFeedItem = styled.TouchableOpacity`
-    margin-top: 42px;
+export const TouchableFeedItem = styled.View`
+    margin-top: 46px;
     align-items: center;
     position: relative;
 `;
 
 export const FloatingTitleView = styled(Animated.View)`
     position: absolute;
-    top: -24px;
+    top: -34px;
     width: 270px;
     align-items: center;
     z-index: 10;
@@ -21,6 +20,9 @@ export const TitleView = styled.SafeAreaView`
     justify-content: center;
     align-items: center;
 
+    min-height: 52px;
+    max-width: 180px;
+
     border-radius: 8px;
     background-color: #FFFFFF;
 
@@ -29,7 +31,7 @@ export const TitleView = styled.SafeAreaView`
     border-bottom-width: 4px;
 
     padding-vertical: 4px;
-    padding-horizontal: 14px;
+    padding-horizontal: 12px;
 `;
 
 export const TitlePointer = styled.View`
@@ -49,57 +51,10 @@ export const TitlePointer = styled.View`
     border-bottom-color: #CCCCCC;
 `;
 
-export const ButtonOuterCircle = styled.View`
-    width: 130px;
-    height: 130px;
-    border-radius: 65px;
-
-    background-color: #FFFFFF;
-
-    border-width: 8px;
-    border-color: #D2D3D5;
-
-    align-items: center;
-    justify-content: center;
-`;
-
-export const ButtonInnerArea = styled.View`
-    width: 96px;
-    height: 96px;
-
-    align-items: center;
-    justify-content: center;
-    position: relative;
-`;
-
-export const ButtonDepthImage = styled(FastImage)`
-    position: absolute;
-
-    width: 92px;
-    height: 92px;
-
-    top: 18px;
-`;
-
-export const ButtonFaceAnimated = styled(Animated.View)`
-    position: absolute;
-
-    top: -5px;
-
-    width: 92px;
-    height: 92px;
-
-    align-items: center;
-    justify-content: center;
-`;
-
-export const ButtonFaceImage = styled(FastImage)`
-    width: 92px;
-    height: 92px;
-`;
-
 export const TextFeedTitle = styled.Text`
     font-size: 28px;
+    line-height: 26px;
     font-family: GothamCondensed-Medium;
+    text-align: center;
     z-index: 2;
 `;

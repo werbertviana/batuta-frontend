@@ -35,6 +35,7 @@ function LessonBlock({
   isItemActive,
   onOpenLockedLesson,
   onClearUnlockAnimation,
+  onOpenActions,
 }) {
   const itens = lesson.items || [];
 
@@ -126,6 +127,8 @@ function LessonBlock({
                 }}
               >
                 <FeedItem
+                  index={index}
+                  lessonNumber={lesson.lesson}
                   title={item.title}
                   icon={item.icon}
                   content={item.content}
@@ -133,6 +136,7 @@ function LessonBlock({
                   practiceRoute={item.practiceRoute}
                   titleOffsetX={index % 2 === 0 ? -18 : 18}
                   pointerOffsetX={index % 2 === 0 ? 12 : -12}
+                  onOpenActions={onOpenActions}
                 />
               </UnlockAnimatedItem>
             );
