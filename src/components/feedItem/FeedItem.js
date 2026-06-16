@@ -1,6 +1,6 @@
 // src/components/feedItem/FeedItem.js
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, SafeAreaView, View } from 'react-native';
 
 import {
@@ -12,7 +12,6 @@ import {
 } from './FeedItemStyles';
 
 import GameCircleButton from '../gameCircleButton/GameCircleButton';
-import LockedModal from '../modal/LockedModal';
 
 const displayTitleMap = {
   'Figuras de Notas': 'Figuras de\nNotas',
@@ -77,11 +76,10 @@ const FeedItem = ({
   lessonNumber,
   onOpenActions,
 }) => {
-  const [lockedVisible, setLockedVisible] = useState(false);
   const floatAnim = useRef(new Animated.Value(0)).current;
   const buttonRef = useRef(null);
 
-  const currentItemKey = `${lessonNumber}:${index}`;
+  const currentItemKey = `${isActive ? 'action' : 'locked'}:${lessonNumber}:${index}`;
 
   useEffect(() => {
     if (!isActive) {
@@ -108,17 +106,12 @@ const FeedItem = ({
     );
 
     animation.start();
+
     return () => animation.stop();
   }, [floatAnim, isActive]);
 
   const handlePress = () => {
-    if (!isActive) {
-      setLockedVisible(true);
-      return;
-    }
-
     if (buttonRef.current) {
-      // Coleta dados rápidos pré-scroll para inicializar a direção da lista
       buttonRef.current.measure((fx, fy, width, height, px, py) => {
         onOpenActions?.(
           {
@@ -128,10 +121,15 @@ const FeedItem = ({
             title,
             content,
             practiceRoute,
-            anchor: { pageX: px, pageY: py, width, height },
+            isActive,
+            anchor: {
+              pageX: px,
+              pageY: py,
+              width,
+              height,
+            },
           },
-          // Enviamos a função de medição nativa anexada ao elemento real para uso pós-scroll
-          (cb) => buttonRef.current?.measure(cb)
+          cb => buttonRef.current?.measure(cb),
         );
       });
     }
@@ -171,13 +169,6 @@ const FeedItem = ({
           />
         </View>
       </TouchableFeedItem>
-
-      <LockedModal
-        visible={lockedVisible}
-        onClose={() => setLockedVisible(false)}
-        title="Atividade bloqueada"
-        message="Complete a atividade anterior para desbloquear esta."
-      />
     </SafeAreaView>
   );
 };

@@ -3,11 +3,6 @@
 import { useState } from 'react';
 
 export default function useHomeModals({ playQueuedUnlockAnimation }) {
-  const [lockedLessonInfo, setLockedLessonInfo] = useState({
-    visible: false,
-    lessonNumber: null,
-  });
-
   const [bonusModalVisible, setBonusModalVisible] = useState(false);
   const [bonusReward, setBonusReward] = useState({
     bonusVidaGanha: false,
@@ -19,20 +14,6 @@ export default function useHomeModals({ playQueuedUnlockAnimation }) {
     eloAnterior: null,
     eloAtual: null,
   });
-
-  const handleOpenLockedLesson = (lessonNumber) => {
-    setLockedLessonInfo({
-      visible: true,
-      lessonNumber,
-    });
-  };
-
-  const handleCloseLockedLesson = () => {
-    setLockedLessonInfo({
-      visible: false,
-      lessonNumber: null,
-    });
-  };
 
   const handleCloseBonusModal = () => {
     setBonusModalVisible(false);
@@ -59,20 +40,7 @@ export default function useHomeModals({ playQueuedUnlockAnimation }) {
     playQueuedUnlockAnimation();
   };
 
-  const lockedLessonNumber = Number(lockedLessonInfo.lessonNumber);
-
-  const previousLessonNumber =
-    lockedLessonNumber > 1 ? lockedLessonNumber - 1 : null;
-
-  const lockedLessonMessage = previousLessonNumber
-    ? `Complete a Lição ${String(previousLessonNumber).padStart(
-        2,
-        '0',
-      )} para \n desbloquear esta lição.`
-    : 'Complete a lição anterior para desbloquear esta lição.';
-
   return {
-    lockedLessonInfo,
     bonusModalVisible,
     bonusReward,
     eloModalVisible,
@@ -83,11 +51,7 @@ export default function useHomeModals({ playQueuedUnlockAnimation }) {
     setEloReward,
     setEloModalVisible,
 
-    handleOpenLockedLesson,
-    handleCloseLockedLesson,
     handleCloseBonusModal,
     handleCloseEloModal,
-
-    lockedLessonMessage,
   };
 }

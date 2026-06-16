@@ -1,9 +1,7 @@
+// src/screens/home/Home.js
+
 import React, { useRef, useState } from 'react';
-import {
-  Dimensions,
-  FlatList,
-  View,
-} from 'react-native';
+import { Dimensions, FlatList, View } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 
@@ -28,15 +26,19 @@ import {
   isLessonBlocked as checkIsLessonBlocked,
 } from './helpers/homeProgressHelpers';
 
-import LockedModal from '../../components/modal/LockedModal';
 import BonusLifeModal from '../../components/modal/BonusLifeModal';
 import EloUpModal from '../../components/modal/EloUpModal';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
 
 const EXTRA_ACTION_SPACE = 150;
+const EXTRA_LOCKED_SPACE = 160;
+
 const TARGET_CENTER_Y = screenHeight * 0.4;
 const POPOVER_WIDTH = 280;
+const POPOVER_TOP_GAP = 10;
+
+const LOCKED_LESSON_TOP_OFFSET = -100;
 
 const contentRouteMap = {
   '1': 'Introdução',
@@ -63,10 +65,10 @@ const practiceRouteMap = {
 function Home({ route }) {
   const navigation = useNavigation();
   const { user, hasSeenTutorial } = useAuth();
-  const currentUser = user;
 
   const flatListRef = useRef(null);
   const scrollOffsetRef = useRef(0);
+  const previousScrollOffsetRef = useRef(0);
   const pendingMeasureRef = useRef(null);
   const lastPopoverLayoutRef = useRef(null);
   const pendingActionRef = useRef(null);
@@ -75,6 +77,7 @@ function Home({ route }) {
   const [renderPopover, setRenderPopover] = useState(null);
   const [actionSpaceVisible, setActionSpaceVisible] = useState(false);
   const [isPopoverClosing, setIsPopoverClosing] = useState(false);
+  const [currentPopoverType, setCurrentPopoverType] = useState(null);
 
   const layoutMetrics = useHomeLayoutMetrics();
 
@@ -99,7 +102,7 @@ function Home({ route }) {
     life,
     batutaPoints,
     xpPoints,
-  } = useHomeData(currentUser);
+  } = useHomeData(user);
 
   const {
     recentlyUnlockedKey,
@@ -111,7 +114,6 @@ function Home({ route }) {
   } = useUnlockAnimationFlow(feeds);
 
   const {
-    lockedLessonInfo,
     bonusModalVisible,
     bonusReward,
     eloModalVisible,
@@ -120,11 +122,8 @@ function Home({ route }) {
     setBonusModalVisible,
     setEloReward,
     setEloModalVisible,
-    handleOpenLockedLesson,
-    handleCloseLockedLesson,
     handleCloseBonusModal,
     handleCloseEloModal,
-    lockedLessonMessage,
   } = useHomeModals({
     playQueuedUnlockAnimation,
   });
@@ -132,7 +131,7 @@ function Home({ route }) {
   useHomeActivityResult({
     route,
     navigation,
-    currentUser,
+    currentUser: user,
     feeds,
     progressLevel,
     setProgressLevel,
@@ -160,6 +159,21 @@ function Home({ route }) {
 
   const isOnlyLesson2Blocked = feeds.length === 2 && isLessonBlocked('2');
 
+  const isLockedLessonAction = (actionData, type) =>
+    type === 'locked' && actionData?.lockedKind === 'lesson';
+
+  const getPointerTop = type => (type === 'locked' ? -12 : -10);
+
+  const getExtraBottomSpace = () => {
+    if (!actionSpaceVisible) {
+      return 35;
+    }
+
+    return currentPopoverType === 'locked'
+      ? EXTRA_LOCKED_SPACE
+      : EXTRA_ACTION_SPACE;
+  };
+
   const closeActions = () => {
     if (renderPopover && !isPopoverClosing) {
       lastPopoverLayoutRef.current = renderPopover;
@@ -168,23 +182,47 @@ function Home({ route }) {
   };
 
   const handlePopoverAnimationEnd = () => {
+    flatListRef.current?.scrollToOffset({
+      offset: previousScrollOffsetRef.current,
+      animated: true,
+    });
+
     setActiveActionKey(null);
     setRenderPopover(null);
-    setActionSpaceVisible(false);
     setIsPopoverClosing(false);
+    setCurrentPopoverType(null);
 
     pendingMeasureRef.current = null;
     lastPopoverLayoutRef.current = null;
     pendingActionRef.current = null;
+
+    setTimeout(() => {
+      setActionSpaceVisible(false);
+    }, 250);
   };
 
-  const measureAndShowPopover = (actionData, measureFn) => {
+  const getPointerLeft = actionData => {
+    const isLeftSide = actionData.index % 2 === 0;
+    return isLeftSide ? 58 : 198;
+  };
+
+  const measureAndShowPopover = (actionData, measureFn, type = 'action') => {
     measureFn((fx, fy, width, measuredHeight, px, py) => {
-      const isLeftSide = actionData.index % 2 === 0;
-      const pointerLeft = isLeftSide ? 58 : 198;
-      const fixedTopPosition = py + measuredHeight + 10;
+      const pointerLeft = getPointerLeft(actionData);
+      const isLockedLesson = isLockedLessonAction(actionData, type);
+
+      const anchorHeight = isLockedLesson
+        ? actionData.anchor?.visualHeight ?? measuredHeight
+        : measuredHeight;
+
+      const fixedTopPosition =
+        py +
+        anchorHeight +
+        POPOVER_TOP_GAP +
+        (isLockedLesson ? LOCKED_LESSON_TOP_OFFSET : 0);
 
       const popoverLayout = {
+        type,
         top: fixedTopPosition,
         pointerLeft,
         itemData: actionData,
@@ -193,11 +231,16 @@ function Home({ route }) {
       lastPopoverLayoutRef.current = popoverLayout;
 
       setIsPopoverClosing(false);
+      setCurrentPopoverType(type);
       setRenderPopover(popoverLayout);
     });
   };
 
-  const openActionsAfterSpaceReady = (actionData, measureButtonNativeFn) => {
+  const openPopoverAfterSpaceReady = (
+    actionData,
+    measureButtonNativeFn,
+    type = 'action',
+  ) => {
     const currentOffset = scrollOffsetRef.current;
     const originalAnchorY = actionData.anchor?.pageY ?? TARGET_CENTER_Y;
 
@@ -208,18 +251,18 @@ function Home({ route }) {
       targetOffset = 0;
 
       if (currentOffset === 0) {
-        measureAndShowPopover(actionData, measureButtonNativeFn);
+        measureAndShowPopover(actionData, measureButtonNativeFn, type);
         return;
       }
     }
 
     if (Math.abs(scrollDelta) < 5) {
-      measureAndShowPopover(actionData, measureButtonNativeFn);
+      measureAndShowPopover(actionData, measureButtonNativeFn, type);
       return;
     }
 
     pendingMeasureRef.current = () =>
-      measureAndShowPopover(actionData, measureButtonNativeFn);
+      measureAndShowPopover(actionData, measureButtonNativeFn, type);
 
     flatListRef.current?.scrollToOffset({
       offset: targetOffset,
@@ -227,23 +270,29 @@ function Home({ route }) {
     });
   };
 
-  const handleOpenActions = (actionData, measureButtonNativeFn) => {
-    const isSameItem = activeActionKey === actionData.key;
+  const openPopover = (actionData, measureButtonNativeFn, type = 'action') => {
+    const isSameItem =
+      activeActionKey === actionData.key &&
+      renderPopover?.type === type;
 
     if (isSameItem) {
       closeActions();
       return;
     }
 
+    previousScrollOffsetRef.current = scrollOffsetRef.current;
+
     pendingMeasureRef.current = null;
 
     setRenderPopover(null);
     setIsPopoverClosing(false);
     setActiveActionKey(actionData.key);
+    setCurrentPopoverType(type);
 
     pendingActionRef.current = {
       actionData,
       measureButtonNativeFn,
+      type,
     };
 
     setActionSpaceVisible(true);
@@ -256,12 +305,21 @@ function Home({ route }) {
 
         pendingActionRef.current = null;
 
-        openActionsAfterSpaceReady(
+        openPopoverAfterSpaceReady(
           pendingAction.actionData,
           pendingAction.measureButtonNativeFn,
+          pendingAction.type,
         );
       });
     });
+  };
+
+  const handleOpenActions = (actionData, measureButtonNativeFn) => {
+    openPopover(actionData, measureButtonNativeFn, 'action');
+  };
+
+  const handleOpenLockedActions = (actionData, measureButtonNativeFn) => {
+    openPopover(actionData, measureButtonNativeFn, 'locked');
   };
 
   const handleScrollEnd = () => {
@@ -323,12 +381,7 @@ function Home({ route }) {
 
   return (
     <HomeContainer>
-      <View
-        style={{ flex: 1 }}
-        onTouchStart={() => {
-          closeActions();
-        }}
-      >
+      <View style={{ flex: 1 }} onTouchStart={closeActions}>
         <Header
           xpPoints={xpPoints}
           batutaPoints={batutaPoints}
@@ -348,22 +401,21 @@ function Home({ route }) {
               compactLesson1IconWidth={compactLesson1IconWidth}
               compactLesson1IconHeight={compactLesson1IconHeight}
               compactLesson1BoardHeight={compactLesson1BoardHeight}
-              lockedLessonIconWidth={lockedLessonIconWidth}
-              lockedLessonIconHeight={lockedLessonIconHeight}
               lockedCardWidth={lockedCardWidth}
               lockedCardHeight={lockedCardHeight}
               lockedCardMarginBottom={lockedCardMarginBottom}
+              activeActionKey={activeActionKey}
               recentlyUnlockedKey={recentlyUnlockedKey}
               unlockGlowSize={unlockGlowSize}
               getLessonIcon={getLessonIcon}
               isItemActive={isItemActive}
-              onOpenLockedLesson={handleOpenLockedLesson}
+              onOpenLockedLesson={handleOpenLockedActions}
               onClearUnlockAnimation={clearUnlockAnimation}
               onOpenActions={handleOpenActions}
             />
           )}
           showsVerticalScrollIndicator={false}
-          scrollEnabled={!isOnlyLesson2Blocked}
+          scrollEnabled
           scrollEventThrottle={16}
           onScroll={event => {
             scrollOffsetRef.current = event.nativeEvent.contentOffset.y;
@@ -372,7 +424,7 @@ function Home({ route }) {
           onMomentumScrollEnd={handleScrollEnd}
           onScrollAnimationEnd={handleScrollEnd}
           contentContainerStyle={{
-            paddingBottom: actionSpaceVisible ? EXTRA_ACTION_SPACE : 35,
+            paddingBottom: getExtraBottomSpace(),
           }}
         />
       </View>
@@ -390,9 +442,15 @@ function Home({ route }) {
           }}
         >
           <ActionPopover
+            variant={popoverLayout.type}
+            title={popoverLayout.itemData?.title || 'Conteúdo bloqueado'}
+            message={
+              popoverLayout.itemData?.message ||
+              'Complete a atividade anterior para desbloquear esse aqui!'
+            }
             pointerStyle={{
               left: popoverLayout.pointerLeft,
-              top: -10,
+              top: getPointerTop(popoverLayout.type),
             }}
             isClosing={isPopoverClosing}
             onAnimationEnd={handlePopoverAnimationEnd}
@@ -401,13 +459,6 @@ function Home({ route }) {
           />
         </View>
       )}
-
-      <LockedModal
-        visible={lockedLessonInfo.visible}
-        onClose={handleCloseLockedLesson}
-        title="Lição bloqueada"
-        message={lockedLessonMessage}
-      />
 
       <BonusLifeModal
         visible={bonusModalVisible}
