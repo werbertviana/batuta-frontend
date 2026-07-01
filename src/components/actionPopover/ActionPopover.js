@@ -33,17 +33,21 @@ function ActionPopover({
   onAnimationEnd,
 }) {
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const hasOpenedRef = useRef(false);
+  const closingAnimationRef = useRef(null);
 
   const isLocked = variant === 'locked';
 
   useEffect(() => {
     if (isClosing) {
-      Animated.timing(scaleAnim, {
+      closingAnimationRef.current = Animated.timing(scaleAnim, {
         toValue: 0.85,
         duration: 120,
         easing: Easing.in(Easing.ease),
         useNativeDriver: true,
-      }).start(({ finished }) => {
+      });
+
+      closingAnimationRef.current.start(({ finished }) => {
         if (finished && onAnimationEnd) {
           onAnimationEnd();
         }
@@ -52,12 +56,21 @@ function ActionPopover({
       return;
     }
 
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      friction: 6,
-      tension: 45,
-      useNativeDriver: true,
-    }).start();
+    // Se existir uma animação de fechamento em andamento,
+    // interrompe ela imediatamente.
+    closingAnimationRef.current?.stop();
+    closingAnimationRef.current = null;
+
+    if (!hasOpenedRef.current) {
+      hasOpenedRef.current = true;
+
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 6,
+        tension: 45,
+        useNativeDriver: true,
+      }).start();
+    }
   }, [isClosing, scaleAnim, onAnimationEnd]);
 
   return (
@@ -72,7 +85,10 @@ function ActionPopover({
         }}
       >
         <ActionPopoverContainer style={style} variant={variant}>
-          <ActionPopoverPointer style={pointerStyle} variant={variant} />
+          <ActionPopoverPointer
+            style={pointerStyle}
+            variant={variant}
+          />
 
           {isLocked ? (
             <>
@@ -86,7 +102,11 @@ function ActionPopover({
 
               <LockedButton activeOpacity={1}>
                 <LockedButtonIconBox>
-                  <Feather name="lock" size={22} color="#F3F3F3" />
+                  <Feather
+                    name="lock"
+                    size={22}
+                    color="#F3F3F3"
+                  />
                 </LockedButtonIconBox>
 
                 <LockedButtonText>

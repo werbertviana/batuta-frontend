@@ -29,36 +29,52 @@ function LessonBlock({
   isItemActive,
   onOpenLockedLesson,
   onClearUnlockAnimation,
+  isPressingItemRef,
   onOpenActions,
 }) {
   const lockedCardRef = useRef(null);
   const itens = lesson.items || [];
 
   const lockedLessonKey = `locked-lesson-${lesson.lesson}`;
-  const isLockedLessonPopoverOpen = activeActionKey === lockedLessonKey;
+  const isLockedLessonPopoverOpen =
+    activeActionKey === lockedLessonKey;
 
   const handleOpenLockedLesson = () => {
-    lockedCardRef.current?.measure((fx, fy, width, measuredHeight, px, py) => {
-      const lockedActionData = {
-        key: lockedLessonKey,
-        lesson: lesson.lesson,
-        // title: `Lição ${String(lesson.lesson).padStart(2, '0')}`,
-        index: 1,
-        lockedKind: 'lesson',
-        message: 'Complete a lição anterior para desbloquear essa aqui!',
-        anchor: {
-          pageX: px,
-          pageY: py,
-          width,
-          height: measuredHeight,
-          visualHeight: lockedCardHeight,
-        },
-      };
+    lockedCardRef.current?.measure(
+      (
+        fx,
+        fy,
+        width,
+        measuredHeight,
+        px,
+        py,
+      ) => {
+        const lockedActionData = {
+          key: lockedLessonKey,
+          lesson: lesson.lesson,
+          index: 1,
+          lockedKind: 'lesson',
+          message:
+            'Complete a lição anterior para desbloquear esse aqui!',
+          anchor: {
+            pageX: px,
+            pageY: py,
+            width,
+            height: measuredHeight,
+            visualHeight: lockedCardHeight,
+          },
+        };
 
-      onOpenLockedLesson?.(lockedActionData, callback => {
-        lockedCardRef.current?.measure(callback);
-      });
-    });
+        onOpenLockedLesson?.(
+          lockedActionData,
+          callback => {
+            lockedCardRef.current?.measure(
+              callback,
+            );
+          },
+        );
+      },
+    );
   };
 
   if (isBlocked) {
@@ -67,14 +83,23 @@ function LessonBlock({
         style={{
           alignItems: 'center',
           marginTop: 8,
-          marginBottom: isLockedLessonPopoverOpen ? 30 : -130,
+          marginBottom:
+            isLockedLessonPopoverOpen
+              ? 30
+              : -130,
         }}
       >
-        <TouchableOpacity activeOpacity={0.8} onPress={handleOpenLockedLesson}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={handleOpenLockedLesson}
+        >
           <View style={{ alignItems: 'center' }}>
             <LessonContainer>
               <IconLesson
-                source={getLessonIcon(lesson.lesson, true)}
+                source={getLessonIcon(
+                  lesson.lesson,
+                  true,
+                )}
                 resizeMode="contain"
                 style={{
                   marginBottom: 8,
@@ -84,9 +109,10 @@ function LessonBlock({
 
             <View
               style={{
-                marginBottom: isLockedLessonPopoverOpen
-                  ? -20
-                  : lockedCardMarginBottom,
+                marginBottom:
+                  isLockedLessonPopoverOpen
+                    ? -20
+                    : lockedCardMarginBottom,
               }}
             >
               <View
@@ -115,12 +141,20 @@ function LessonBlock({
         />
       </LessonContainer>
 
-      <Background resizeMode="contain" source={Bg}>
+      <Background
+        resizeMode="contain"
+        source={Bg}
+      >
         <ItemContainer>
           {itens.map((item, index) => {
             const unlockKey = `${lesson.lesson}:${item.id}`;
-            const isRecentlyUnlocked = recentlyUnlockedKey === unlockKey;
-            const itemIsActive = isItemActive(lesson, index);
+            const isRecentlyUnlocked =
+              recentlyUnlockedKey === unlockKey;
+
+            const itemIsActive = isItemActive(
+              lesson,
+              index,
+            );
 
             return (
               <UnlockAnimatedItem
@@ -140,13 +174,40 @@ function LessonBlock({
                   icon={item.icon}
                   content={item.content}
                   isActive={itemIsActive}
-                  practiceRoute={item.practiceRoute}
-                  titleOffsetX={index % 2 === 0 ? -18 : 18}
-                  pointerOffsetX={index % 2 === 0 ? 12 : -12}
-                  onOpenActions={
-                    itemIsActive ? onOpenActions : onOpenLockedLesson
+                  isPressingItemRef={isPressingItemRef}
+                  practiceRoute={
+                    item.practiceRoute
                   }
-                />
+                  titleOffsetX={
+                    index % 2 === 0
+                      ? -18
+                      : 18
+                  }
+                  pointerOffsetX={
+                    index % 2 === 0
+                      ? 12
+                      : -12
+                  }
+                  onOpenActions={(actionData, measureButtonNativeFn) => {
+                    console.log(
+                      '🟠 LessonBlock clicou:',
+                      lesson.lesson,
+                      item.title,
+                    );
+
+                    if (itemIsActive) {
+                      onOpenActions?.(
+                        actionData,
+                        measureButtonNativeFn,
+                      );
+                    } else {
+                      onOpenLockedLesson?.(
+                        actionData,
+                        measureButtonNativeFn,
+                      );
+                    }
+                  }}
+                  />
               </UnlockAnimatedItem>
             );
           })}

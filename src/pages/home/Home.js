@@ -70,11 +70,10 @@ function Home({ route }) {
   const scrollOffsetRef = useRef(0);
   const previousScrollOffsetRef = useRef(0);
   const pendingMeasureRef = useRef(null);
-  const lastPopoverLayoutRef = useRef(null);
-  const pendingActionRef = useRef(null);
+  const isPressingItemRef = useRef(false);
 
   const [activeActionKey, setActiveActionKey] = useState(null);
-  const [renderPopover, setRenderPopover] = useState(null);
+  const [popover, setPopover] = useState(null);
   const [actionSpaceVisible, setActionSpaceVisible] = useState(false);
   const [isPopoverClosing, setIsPopoverClosing] = useState(false);
   const [currentPopoverType, setCurrentPopoverType] = useState(null);
@@ -175,8 +174,7 @@ function Home({ route }) {
   };
 
   const closeActions = () => {
-    if (renderPopover && !isPopoverClosing) {
-      lastPopoverLayoutRef.current = renderPopover;
+    if (popover && !isPopoverClosing) {
       setIsPopoverClosing(true);
     }
   };
@@ -188,13 +186,11 @@ function Home({ route }) {
     });
 
     setActiveActionKey(null);
-    setRenderPopover(null);
+    setPopover(null);
     setIsPopoverClosing(false);
     setCurrentPopoverType(null);
 
     pendingMeasureRef.current = null;
-    lastPopoverLayoutRef.current = null;
-    pendingActionRef.current = null;
 
     setTimeout(() => {
       setActionSpaceVisible(false);
@@ -228,11 +224,9 @@ function Home({ route }) {
         itemData: actionData,
       };
 
-      lastPopoverLayoutRef.current = popoverLayout;
-
       setIsPopoverClosing(false);
       setCurrentPopoverType(type);
-      setRenderPopover(popoverLayout);
+      setPopover(popoverLayout);
     });
   };
 
@@ -271,48 +265,48 @@ function Home({ route }) {
   };
 
   const openPopover = (actionData, measureButtonNativeFn, type = 'action') => {
-    const isSameItem =
-      activeActionKey === actionData.key &&
-      renderPopover?.type === type;
 
-    if (isSameItem) {
-      closeActions();
-      return;
-    }
+  const isSameItem =
+    activeActionKey === actionData.key &&
+    popover?.type === type;
 
-    previousScrollOffsetRef.current = scrollOffsetRef.current;
+  // Mesmo item -> fecha
+  if (isSameItem) {
+    closeActions();
+    return;
+  }
 
-    pendingMeasureRef.current = null;
+  previousScrollOffsetRef.current = scrollOffsetRef.current;
 
-    setRenderPopover(null);
-    setIsPopoverClosing(false);
-    setActiveActionKey(actionData.key);
-    setCurrentPopoverType(type);
+  pendingMeasureRef.current = null;
 
-    pendingActionRef.current = {
-      actionData,
-      measureButtonNativeFn,
-      type,
-    };
+  setActiveActionKey(actionData.key);
+  setCurrentPopoverType(type);
+  setIsPopoverClosing(false);
 
+  // Primeira abertura
+  if (!actionSpaceVisible) {
     setActionSpaceVisible(true);
 
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const pendingAction = pendingActionRef.current;
-
-        if (!pendingAction) return;
-
-        pendingActionRef.current = null;
-
-        openPopoverAfterSpaceReady(
-          pendingAction.actionData,
-          pendingAction.measureButtonNativeFn,
-          pendingAction.type,
-        );
-      });
+      openPopoverAfterSpaceReady(
+        actionData,
+        measureButtonNativeFn,
+        type,
+      );
     });
-  };
+
+    return;
+  }
+
+  // Já existe um popover aberto:
+  // apenas atualiza o conteúdo
+  openPopoverAfterSpaceReady(
+    actionData,
+    measureButtonNativeFn,
+    type,
+  );
+};
 
   const handleOpenActions = (actionData, measureButtonNativeFn) => {
     openPopover(actionData, measureButtonNativeFn, 'action');
@@ -373,15 +367,27 @@ function Home({ route }) {
     navigation.navigate(routeName);
   };
 
-  const popoverLayout = renderPopover ?? lastPopoverLayoutRef.current;
-
+  const popoverLayout = popover;
   if (isLoadingFeeds) {
     return <BatutaLoader text="Carregando lições..." />;
   }
 
   return (
-    <HomeContainer>
-      <View style={{ flex: 1 }} onTouchStart={closeActions}>
+<HomeContainer
+  onTouchStart={() => {
+    // O toque veio de um botão da lição.
+    // Não fecha o popover.
+    if (isPressingItemRef.current) {
+      return;
+    }
+
+    // Toque fora de qualquer botão.
+    if (popover && !isPopoverClosing) {
+      closeActions();
+    }
+  }}
+>
+      <View style={{ flex: 1 }}>
         <Header
           xpPoints={xpPoints}
           batutaPoints={batutaPoints}
@@ -411,6 +417,7 @@ function Home({ route }) {
               isItemActive={isItemActive}
               onOpenLockedLesson={handleOpenLockedActions}
               onClearUnlockAnimation={clearUnlockAnimation}
+              isPressingItemRef={isPressingItemRef}
               onOpenActions={handleOpenActions}
             />
           )}
@@ -429,7 +436,7 @@ function Home({ route }) {
         />
       </View>
 
-      {(renderPopover !== null || isPopoverClosing) && popoverLayout && (
+      {popoverLayout && (
         <View
           pointerEvents={isPopoverClosing ? 'none' : 'auto'}
           style={{

@@ -19,6 +19,7 @@ function GameCircleButton({
   icon,
   isActive = true,
   onPress,
+  isPressingItemRef,
 }) {
   const pressAnim = useRef(new Animated.Value(0)).current;
 
@@ -68,9 +69,31 @@ function GameCircleButton({
   return (
     <TouchableButton
       activeOpacity={1}
-      onPressIn={pressDown}
-      onPressOut={pressUp}
-      onPress={handlePress}
+      onPressIn={() => {
+        if (isPressingItemRef) {
+          isPressingItemRef.current = true;
+        }
+
+        console.log(
+          '🟢 BUTTON onPressIn',
+          isPressingItemRef?.current,
+        );
+
+        pressDown();
+      }}
+      onPressOut={() => {
+        console.log('🟡 BUTTON onPressOut');
+
+        if (isPressingItemRef) {
+          isPressingItemRef.current = false;
+        }
+
+        pressUp();
+      }}
+      onPress={event => {
+        console.log('🔵 BUTTON onPress');
+        handlePress(event);
+      }}
     >
       <ButtonOuterCircle>
         <ButtonInnerArea>
@@ -94,7 +117,11 @@ function GameCircleButton({
                 source={icon}
                 resizeMode="contain"
                 style={{
-                  transform: [{ scaleY: ICON_COMPENSATE_SCALE_Y }],
+                  transform: [
+                    {
+                      scaleY: ICON_COMPENSATE_SCALE_Y,
+                    },
+                  ],
                 }}
               />
             </ButtonFaceCircle>

@@ -74,6 +74,7 @@ const FeedItem = ({
   pointerOffsetX = 0,
   index = 0,
   lessonNumber,
+  isPressingItemRef,
   onOpenActions,
 }) => {
   const floatAnim = useRef(new Animated.Value(0)).current;
@@ -164,6 +165,7 @@ const FeedItem = ({
         <View ref={buttonRef} collapsable={false}>
           <GameCircleButton
             icon={getIcon(icon, isActive)}
+            isPressingItemRef={isPressingItemRef}
             isActive={isActive}
             onPress={handlePress}
           />
